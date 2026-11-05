@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Obscurial - Cherenkov</title>
+<title>RE-AKTOR</title>
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -58,16 +58,16 @@
     overflow: hidden;
   }
 
-  #intro-bg {
+  #intro-bg-canvas {
     position: absolute;
-    inset: -30px;
-    background-image: url('https://mbrissette.x02.me/i/heX18A.jpeg');
-    background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
-    transform: scale(1.04);
-    transition: transform 0.25s ease-out, opacity 0.8s ease;
-    will-change: opacity, transform;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.8s ease;
+    will-change: opacity;
   }
 
   #intro-dust-canvas {
@@ -83,11 +83,13 @@
   #intro-overlay-shade {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(14, 18, 22, 0.10) 0%, rgba(10, 13, 16, 0.42) 65%, rgba(6, 8, 10, 0.82) 100%),
-                linear-gradient(180deg, rgba(8, 11, 14, 0.25) 0%, rgba(6, 8, 10, 0.6) 100%);
+    /* Softened and brightened overlay shade */
+    background: radial-gradient(circle at center, rgba(14, 18, 22, 0.02) 0%, rgba(10, 13, 16, 0.18) 60%, rgba(6, 8, 10, 0.52) 100%),
+                linear-gradient(180deg, rgba(8, 11, 14, 0.08) 0%, rgba(6, 8, 10, 0.32) 100%);
     pointer-events: none;
     transition: opacity 1.1s cubic-bezier(0.25, 1, 0.5, 1);
     will-change: opacity;
+    z-index: 3;
   }
 
   #intro-content {
@@ -591,7 +593,7 @@
 
 <!-- Intro Screen & Video Layer -->
 <div id="intro-layer">
-  <div id="intro-bg"></div>
+  <canvas id="intro-bg-canvas"></canvas>
   <canvas id="intro-dust-canvas"></canvas>
   <div id="intro-overlay-shade"></div>
 
@@ -1347,6 +1349,378 @@ roofGroup.add( roofCapMesh );
 	env.add( tinScraps );
 }
 
+// ═══════════════════════════════════════════════════════════════════
+//  Corroded Service Catwalk & Wall Ladder with Broken Safety Cage
+// ═══════════════════════════════════════════════════════════════════
+const rustedMetalMat = new THREE.MeshStandardNodeMaterial( {
+	color: 0x1f1916,
+	roughness: 0.94,
+	metalness: 0.12,
+	side: THREE.DoubleSide
+} );
+{
+	const wp = positionWorld;
+	const rustFbm = fbm( wp.mul( 2.2 ), 3 );
+	const rustOchre = vec3( 0.48, 0.22, 0.12 );
+	const darkIron = vec3( 0.10, 0.11, 0.12 );
+	rustedMetalMat.colorNode = mix( darkIron, rustOchre, rustFbm.mul( 0.65 ) );
+}
+
+// 1. Curved Catwalk Looping Mid-Height Along Silo Wall
+const catwalkGroup = new THREE.Group();
+catwalkGroup.position.y = 4.2;
+env.add( catwalkGroup );
+
+{
+	const catRIn = SILO.radius * 0.78;
+	const catROut = SILO.radius * 0.90;
+	const catMidR = ( catRIn + catROut ) / 2;
+	const arcSpan = Math.PI * 1.55; // 3/4 circumference loop with open gap
+	const SEGMENTS = 52;
+
+	// Perforated grating walkway floor
+	const walkGeo = new THREE.RingGeometry( catRIn, catROut, SEGMENTS, 1, 0, arcSpan );
+	walkGeo.rotateX( - Math.PI / 2 );
+	const walkMesh = new THREE.Mesh( walkGeo, rustedMetalMat );
+	walkMesh.receiveShadow = true;
+	walkMesh.castShadow = true;
+	catwalkGroup.add( walkMesh );
+
+	// Inner and Outer guardrails
+	const postGeo = new THREE.CylinderGeometry( 0.025, 0.025, 1.05, 6 );
+	const railCount = Math.floor( SEGMENTS * 0.7 );
+	const postMesh = new THREE.InstancedMesh( postGeo, rustedMetalMat, railCount * 2 );
+	const m4 = new THREE.Matrix4(), pPos = new THREE.Vector3();
+
+	let instIdx = 0;
+	for ( let i = 0; i < railCount; i ++ ) {
+		const a = ( i / ( railCount - 1 ) ) * arcSpan;
+		// Inner post
+		pPos.set( Math.cos( a ) * catRIn, 0.525, Math.sin( a ) * catRIn );
+		m4.makeTranslation( pPos.x, pPos.y, pPos.z );
+		postMesh.setMatrixAt( instIdx ++, m4 );
+		// Outer post
+		pPos.set( Math.cos( a ) * catROut, 0.525, Math.sin( a ) * catROut );
+		m4.makeTranslation( pPos.x, pPos.y, pPos.z );
+		postMesh.setMatrixAt( instIdx ++, m4 );
+	}
+	postMesh.castShadow = true;
+	catwalkGroup.add( postMesh );
+
+	// Continuous handrail tubes (curved tori slices)
+	const handrailInner = new THREE.Mesh(
+		new THREE.TorusGeometry( catRIn, 0.025, 6, SEGMENTS, arcSpan ),
+		rustedMetalMat
+	);
+	handrailInner.rotation.x = Math.PI / 2;
+	handrailInner.position.y = 1.05;
+	catwalkGroup.add( handrailInner );
+
+	const handrailOuter = new THREE.Mesh(
+		new THREE.TorusGeometry( catROut, 0.025, 6, SEGMENTS, arcSpan ),
+		rustedMetalMat
+	);
+	handrailOuter.rotation.x = Math.PI / 2;
+	handrailOuter.position.y = 1.05;
+	catwalkGroup.add( handrailOuter );
+
+	// Diagonal Wall Cantilever Support Brackets
+	const BRACKETS = 14;
+	const strutGeo = new THREE.BoxGeometry( 0.06, 0.06, catROut - catRIn + 0.6 );
+	const diagGeo = new THREE.CylinderGeometry( 0.03, 0.03, 1.7, 6 );
+	const bracketMesh = new THREE.InstancedMesh( strutGeo, rustedMetalMat, BRACKETS );
+	const diagMesh = new THREE.InstancedMesh( diagGeo, rustedMetalMat, BRACKETS );
+	const eRot = new THREE.Euler(), qRot = new THREE.Quaternion();
+
+	for ( let i = 0; i < BRACKETS; i ++ ) {
+		const a = ( i / ( BRACKETS - 1 ) ) * arcSpan;
+		pPos.set( Math.cos( a ) * ( catMidR + 0.1 ), - 0.04, Math.sin( a ) * ( catMidR + 0.1 ) );
+		eRot.set( 0, - a + Math.PI / 2, 0 );
+		qRot.setFromEuler( eRot );
+		m4.compose( pPos, qRot, new THREE.Vector3( 1, 1, 1 ) );
+		bracketMesh.setMatrixAt( i, m4 );
+
+		// Diagonal bracing to silo wall below
+		const dPos = new THREE.Vector3( Math.cos( a ) * catMidR, - 0.65, Math.sin( a ) * catMidR );
+		eRot.set( 0.65, - a, 0, 'YXZ' );
+		qRot.setFromEuler( eRot );
+		m4.compose( dPos, qRot, new THREE.Vector3( 1, 1, 1 ) );
+		diagMesh.setMatrixAt( i, m4 );
+	}
+	bracketMesh.castShadow = true;
+	diagMesh.castShadow = true;
+	catwalkGroup.add( bracketMesh, diagMesh );
+}
+
+// 2. Vertical Corroded Access Ladder with Broken Safety Cage
+{
+	const ladderGroup = new THREE.Group();
+	const ladderAngle = Math.PI * 0.18; // Offset along wall
+	const ladderR = SILO.radius * 0.90;
+	ladderGroup.position.set( Math.cos( ladderAngle ) * ladderR, ( SILO.ceil + SILO.floor ) / 2, Math.sin( ladderAngle ) * ladderR );
+	ladderGroup.rotation.y = - ladderAngle - Math.PI / 2;
+	env.add( ladderGroup );
+
+	const ladderH = ( SILO.ceil - SILO.floor ) + 0.6; // Ground to ceiling reach
+	const ladderW = 0.54;
+	const standOffDist = 0.38; // Distance from silo wall surface
+
+	// Sturdy industrial channel rails (rectangular hollow sections / C-channels)
+	const stringerGeo = new THREE.BoxGeometry( 0.05, ladderH, 0.08 );
+	const leftStringer = new THREE.Mesh( stringerGeo, rustedMetalMat );
+	leftStringer.position.set( - ladderW / 2, 0, 0 );
+	leftStringer.castShadow = true;
+	leftStringer.receiveShadow = true;
+
+	const rightStringer = new THREE.Mesh( stringerGeo, rustedMetalMat );
+	rightStringer.position.set( ladderW / 2, 0, 0 );
+	rightStringer.castShadow = true;
+	rightStringer.receiveShadow = true;
+	ladderGroup.add( leftStringer, rightStringer );
+
+	// Heavy wall standoff brackets with mounting wall plates anchoring to the silo
+	const STANDOFF_COUNT = 7;
+	const standoffBarGeo = new THREE.BoxGeometry( 0.04, 0.06, standOffDist );
+	const wallPlateGeo = new THREE.BoxGeometry( 0.14, 0.14, 0.02 );
+	const standoffMesh = new THREE.InstancedMesh( standoffBarGeo, rustedMetalMat, STANDOFF_COUNT * 2 );
+	const wallPlatesMesh = new THREE.InstancedMesh( wallPlateGeo, rustedMetalMat, STANDOFF_COUNT * 2 );
+	const sm4 = new THREE.Matrix4(), wm4 = new THREE.Matrix4();
+
+	let sIdx = 0;
+	for ( let i = 0; i < STANDOFF_COUNT; i ++ ) {
+		const y = - ladderH / 2 + 0.6 + ( i / ( STANDOFF_COUNT - 1 ) ) * ( ladderH - 1.2 );
+		// Left standoff
+		sm4.makeTranslation( - ladderW / 2, y, - standOffDist / 2 );
+		standoffMesh.setMatrixAt( sIdx, sm4 );
+		wm4.makeTranslation( - ladderW / 2, y, - standOffDist );
+		wallPlatesMesh.setMatrixAt( sIdx, wm4 );
+		sIdx ++;
+
+		// Right standoff
+		sm4.makeTranslation( ladderW / 2, y, - standOffDist / 2 );
+		standoffMesh.setMatrixAt( sIdx, sm4 );
+		wm4.makeTranslation( ladderW / 2, y, - standOffDist );
+		wallPlatesMesh.setMatrixAt( sIdx, wm4 );
+		sIdx ++;
+	}
+	standoffMesh.castShadow = true;
+	wallPlatesMesh.castShadow = true;
+	ladderGroup.add( standoffMesh, wallPlatesMesh );
+
+	// Nonslip serrated grooved rungs with end gusset weld tabs
+	const RUNGS = 42;
+	const rungGeo = new THREE.CylinderGeometry( 0.019, 0.019, ladderW - 0.02, 10 );
+	rungGeo.rotateZ( Math.PI / 2 );
+	const rungsMesh = new THREE.InstancedMesh( rungGeo, rustedMetalMat, RUNGS );
+	const rm4 = new THREE.Matrix4();
+	for ( let i = 0; i < RUNGS; i ++ ) {
+		const y = - ladderH / 2 + 0.3 + ( i / ( RUNGS - 1 ) ) * ( ladderH - 0.6 );
+		rm4.makeTranslation( 0, y, 0 );
+		rungsMesh.setMatrixAt( i, rm4 );
+	}
+	rungsMesh.castShadow = true;
+	ladderGroup.add( rungsMesh );
+
+	// Structural safety cage hoops (OSHA flare-out bell bottom entrance, transition to rusted warped hoops)
+	const HOOPS = 18;
+	const cageDepth = 0.68;
+	const cageRadius = 0.40;
+	const hoopGeo = new THREE.TorusGeometry( cageRadius, 0.02, 8, 28, Math.PI * 1.34 );
+	hoopGeo.rotateZ( - Math.PI * 0.67 );
+
+	const hoopsMesh = new THREE.InstancedMesh( hoopGeo, rustedMetalMat, HOOPS );
+	const hm4 = new THREE.Matrix4(), he = new THREE.Euler(), hq = new THREE.Quaternion(), hv = new THREE.Vector3(), hs = new THREE.Vector3();
+
+	const cageStartY = - ladderH / 2 + 2.2; // Clearance at base for climber entry
+	const cageEndY = ladderH / 2 - 0.2;
+	const cageTotalH = cageEndY - cageStartY;
+
+	for ( let i = 0; i < HOOPS; i ++ ) {
+		const t = i / ( HOOPS - 1 );
+		const y = cageStartY + t * cageTotalH;
+
+		// Bottom entrance hoop flared bell mouth
+		let flare = 1.0;
+		if ( i === 0 ) flare = 1.35;
+		else if ( i === 1 ) flare = 1.15;
+
+		// Warped & sheared industrial decay at upper heights near catwalk break
+		const decay = i > 11 ? Math.pow( ( i - 11 ) / 6, 1.8 ) : 0;
+		const wobbleX = ( Math.sin( i * 1.7 ) * 0.04 ) * ( 1 + decay );
+		const wobbleZ = ( Math.cos( i * 1.3 ) * 0.05 ) * ( 1 + decay );
+
+		hv.set( wobbleX, y, cageDepth / 2 + wobbleZ );
+		he.set(
+			decay * 0.22 * Math.sin( i * 2.1 ),
+			decay * 0.18 * Math.cos( i * 1.4 ),
+			decay * 0.25 * Math.sin( i * 0.9 )
+		);
+		hq.setFromEuler( he );
+		hs.set( flare * ( 1 + decay * 0.2 ), flare, 1 + decay * 0.35 );
+		hm4.compose( hv, hq, hs );
+		hoopsMesh.setMatrixAt( i, hm4 );
+	}
+	hoopsMesh.castShadow = true;
+	ladderGroup.add( hoopsMesh );
+
+	// Vertical cage reinforcement straps (5 ribbed flat bars running through all hoops)
+	const STRAPS = 5;
+	const strapL = cageTotalH + 0.3;
+	const strapGeo = new THREE.BoxGeometry( 0.032, strapL, 0.012 );
+	const strapMesh = new THREE.InstancedMesh( strapGeo, rustedMetalMat, STRAPS );
+	const smat = new THREE.Matrix4(), sRot = new THREE.Euler(), sQuat = new THREE.Quaternion(), sPos = new THREE.Vector3();
+
+	for ( let i = 0; i < STRAPS; i ++ ) {
+		const angle = ( ( i / ( STRAPS - 1 ) ) - 0.5 ) * ( Math.PI * 0.95 );
+		const strapX = Math.sin( angle ) * cageRadius;
+		const strapZ = cageDepth / 2 + Math.cos( angle ) * cageRadius;
+
+		// Middle straps broken/severed near top
+		const isBuckled = i === 1 || i === 3;
+		sPos.set( strapX, cageStartY + strapL / 2, strapZ );
+		sRot.set( isBuckled ? 0.08 : 0, 0, isBuckled ? ( i === 1 ? - 0.06 : 0.06 ) : 0 );
+		sQuat.setFromEuler( sRot );
+		smat.compose( sPos, sQuat, new THREE.Vector3( 1, isBuckled ? 0.88 : 1.0, 1 ) );
+		strapMesh.setMatrixAt( i, smat );
+	}
+	strapMesh.castShadow = true;
+	ladderGroup.add( strapMesh );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  Cherenkov Electrical Arcs (Discharge Filament Lightning)
+// ═══════════════════════════════════════════════════════════════════
+const MAX_ARCS = 4;
+const ARC_SEGS = 24;
+const arcGroup = new THREE.Group();
+env.add( arcGroup );
+
+const arcLines = [];
+const arcData = [];
+
+const arcMaterial = new THREE.LineBasicMaterial( {
+	color: 0x58d9ff,
+	transparent: true,
+	opacity: 0,
+	blending: THREE.AdditiveBlending,
+	depthWrite: false,
+	linewidth: 2
+} );
+
+for ( let i = 0; i < MAX_ARCS; i ++ ) {
+	const geo = new THREE.BufferGeometry();
+	const posArr = new Float32Array( ARC_SEGS * 3 );
+	geo.setAttribute( 'position', new THREE.BufferAttribute( posArr, 3 ) );
+
+	const line = new THREE.Line( geo, arcMaterial.clone() );
+	line.frustumCulled = false;
+	arcGroup.add( line );
+	arcLines.push( line );
+
+	arcData.push( {
+		active: false,
+		life: 0,
+		maxLife: 0.15,
+		start: new THREE.Vector3(),
+		target: new THREE.Vector3(),
+		color: new THREE.Color( 0x70e2ff )
+	} );
+}
+
+// Electrical Arc Point Light for Flash Illumination
+const arcLight = new THREE.PointLight( 0x00d4ff, 0, 14, 2 );
+arcLight.castShadow = false;
+env.add( arcLight );
+
+function triggerElectricalArc( intensity = 1.0 ) {
+	for ( let i = 0; i < MAX_ARCS; i ++ ) {
+		const ad = arcData[ i ];
+		if ( ! ad.active || Math.random() < 0.45 ) {
+			ad.active = true;
+			ad.life = 0.07 + Math.random() * 0.11;
+			ad.maxLife = ad.life;
+
+			// Originates from inside the obscurial core
+			ad.start.copy( uRedPos.value ).add( new THREE.Vector3(
+				( Math.random() - 0.5 ) * 0.35,
+				( Math.random() - 0.5 ) * 0.35,
+				( Math.random() - 0.5 ) * 0.35
+			) );
+
+			// Strike floor puddle water or ground wall plating
+			const strikeAngle = Math.random() * Math.PI * 2;
+			if ( Math.random() < 0.65 ) {
+				// Ground into reflective puddle floor
+				const r = 0.8 + Math.random() * 3.4;
+				ad.target.set( Math.cos( strikeAngle ) * r, SILO.floor + 0.05, Math.sin( strikeAngle ) * r );
+			} else {
+				// Strike lower silo wall / catwalk structural iron
+				const r = SILO.radius * 0.82;
+				ad.target.set( Math.cos( strikeAngle ) * r, SILO.floor + 0.6 + Math.random() * 3.6, Math.sin( strikeAngle ) * r );
+			}
+
+			// Core Cherenkov glow hues (electric cyan #48dcff into violet-blue #709eff)
+			ad.color.setHSL( 0.52 + Math.random() * 0.08, 0.98, 0.72 );
+			arcLines[ i ].material.color.copy( ad.color );
+
+			// Flash arc dynamic point light
+			arcLight.color.copy( ad.color );
+			arcLight.position.copy( ad.start ).lerp( ad.target, 0.5 );
+			arcLight.intensity = Math.min( 18.0 * intensity, 28.0 );
+		}
+	}
+}
+
+function updateElectricalArcs( dt ) {
+	let anyActive = false;
+
+	for ( let i = 0; i < MAX_ARCS; i ++ ) {
+		const ad = arcData[ i ];
+		const line = arcLines[ i ];
+
+		if ( ad.active ) {
+			ad.life -= dt;
+			if ( ad.life <= 0 ) {
+				ad.active = false;
+				line.material.opacity = 0;
+				continue;
+			}
+
+			anyActive = true;
+			const progress = 1.0 - ( ad.life / ad.maxLife );
+			line.material.opacity = ( 1.0 - progress ) * 0.95;
+
+			const pos = line.geometry.attributes.position.array;
+			const p0 = ad.start;
+			const p1 = ad.target;
+			const chord = new THREE.Vector3().subVectors( p1, p0 );
+
+			for ( let j = 0; j < ARC_SEGS; j ++ ) {
+				const frac = j / ( ARC_SEGS - 1 );
+				const cur = new THREE.Vector3().copy( p0 ).addScaledVector( chord, frac );
+
+				// Procedural jagged electric branching offset
+				if ( j > 0 && j < ARC_SEGS - 1 ) {
+					const envelope = Math.sin( frac * Math.PI );
+					const jitter = ( 0.22 + Math.random() * 0.18 ) * envelope;
+					cur.x += ( Math.random() - 0.5 ) * jitter;
+					cur.y += ( Math.random() - 0.5 ) * jitter;
+					cur.z += ( Math.random() - 0.5 ) * jitter;
+				}
+
+				pos[ j * 3 ]     = cur.x;
+				pos[ j * 3 + 1 ] = cur.y;
+				pos[ j * 3 + 2 ] = cur.z;
+			}
+			line.geometry.attributes.position.needsUpdate = true;
+		}
+	}
+
+	if ( ! anyActive && arcLight.intensity > 0.01 ) {
+		arcLight.intensity *= 0.82;
+	}
+}
+
 // Painterly watercolor light shaft (soft diffused wash with motes)
 function shaft( from, dir, len, r0, r1, strength ) {
 	const m = new THREE.MeshBasicNodeMaterial( { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false } );
@@ -1958,6 +2332,12 @@ renderer.setAnimationLoop( () => {
 	emberLight.color.copy( _colA ).lerp( _colB, Math.min( pulseVal, 1.0 ) );
 	emberLight.intensity = P.emberLight * ( 1 + pulseVal * P.pulseGain * 0.5 + audioBass * 1.5 + audioBeat * 2.0 );
 
+	// Trigger branching Cherenkov discharge arcs on pulse peaks or transient audio spikes
+	if ( ( pulseVal > 0.88 && Math.random() < 0.18 ) || ( audioBeat > 0.72 && Math.random() < 0.32 ) ) {
+		triggerElectricalArc( Math.max( pulseVal, audioBeat ) );
+	}
+	updateElectricalArcs( dt );
+
 	if ( bloomPass ) bloomPass.strength.value = P.bloomStrength * ( 1 + pulseVal * P.pulseBloom + audioMid * 0.75 );
 	uDt.value = dt;
 
@@ -1986,7 +2366,7 @@ renderer.setAnimationLoop( () => {
 // ═══════════════════════════════════════════════════════════════════
 
 const introLayer = document.getElementById( 'intro-layer' );
-const introBg = document.getElementById( 'intro-bg' );
+const introBgCanvas = document.getElementById( 'intro-bg-canvas' );
 const introContent = document.getElementById( 'intro-content' );
 const introVideo = document.getElementById( 'intro-video' );
 const enterBtn = document.getElementById( 'enter-silo-btn' );
@@ -1996,6 +2376,235 @@ const titleBlock = document.getElementById( 'title-block' );
 let transitionStarted = false;
 let transitionCompleted = false;
 let checkRafId = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  Intro WebGL Liquid Image Distortion Shader
+// ═══════════════════════════════════════════════════════════════════
+let liquidGl = null;
+let liquidProgram = null;
+let liquidRaf = null;
+let liquidTex = null;
+let liquidLoaded = false;
+
+const liquidState = {
+	mouse: [ 0.5, 0.5 ],
+	targetMouse: [ 0.5, 0.5 ],
+	prevMouse: [ 0.5, 0.5 ],
+	velocity: [ 0.0, 0.0 ],
+	hoverIntensity: 0.0,
+	targetHover: 0.0,
+	aspectRatio: [ 1.0, 1.0 ],
+	time: 0.0
+};
+
+const VS_LIQUID = `
+attribute vec2 position;
+varying vec2 vUv;
+void main() {
+	vUv = position * 0.5 + 0.5;
+	gl_Position = vec4(position, 0.0, 1.0);
+}
+`;
+
+const FS_LIQUID = `
+precision highp float;
+uniform sampler2D uTexture;
+uniform vec2 uMouse;
+uniform vec2 uVelocity;
+uniform float uHover;
+uniform float uTime;
+uniform vec2 uResolution;
+uniform vec2 uImageRes;
+varying vec2 vUv;
+
+// Simplex noise helper
+vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+
+float snoise(vec2 v) {
+	const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+	vec2 i  = floor(v + dot(v, C.yy) );
+	vec2 x0 = v -   i + dot(i, C.xx);
+	vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+	vec4 x12 = x0.xyxy + C.xxzz;
+	x12.xy -= i1;
+	i = mod289(i);
+	vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+	vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+	m = m*m ;
+	m = m*m ;
+	vec3 x = 2.0 * fract(p * C.www) - 1.0;
+	vec3 h = abs(x) - 0.5;
+	vec3 ox = floor(x + 0.5);
+	vec3 a0 = x - ox;
+	m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+	vec3 g;
+	g.x  = a0.x  * x0.x  + h.x  * x0.y;
+	g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+	return 130.0 * dot(m, g);
+}
+
+void main() {
+	// Cover sizing calculation
+	vec2 s = uResolution;
+	vec2 i = uImageRes;
+	float rs = s.x / s.y;
+	float ri = i.x / i.y;
+	vec2 newUv = vUv;
+	if (rs > ri) {
+		newUv = vec2(vUv.x, (vUv.y - 0.5) * (ri / rs) + 0.5);
+	} else {
+		newUv = vec2((vUv.x - 0.5) * (rs / ri) + 0.5, vUv.y);
+	}
+
+	// Aspect-corrected cursor distance
+	vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
+	vec2 diff = (vUv - uMouse) * aspect;
+	float dist = length(diff);
+
+	// Fluid dynamic parameters
+	float radius = 0.38;
+	float influence = smoothstep(radius, 0.0, dist);
+
+	// Multi-frequency organic liquid wave deformation
+	float noiseVal = snoise(diff * 5.0 - vec2(uTime * 0.8, uTime * 0.6));
+	float ripple = sin(dist * 34.0 - uTime * 3.5) * 0.5 + 0.5;
+
+	// Viscous fluid displacement vector
+	vec2 flowDir = normalize(diff + vec2(1e-4));
+	vec2 velDisplacement = uVelocity * influence * 1.8;
+	vec2 waveDisplacement = (flowDir * (ripple * 0.018 + noiseVal * 0.024)) * influence * uHover;
+
+	vec2 totalDisp = velDisplacement + waveDisplacement;
+
+	// Chromatic dispersion through fluid refraction
+	vec2 rUv = newUv - totalDisp * 1.15;
+	vec2 gUv = newUv - totalDisp;
+	vec2 bUv = newUv - totalDisp * 0.85;
+
+	float r = texture2D(uTexture, clamp(rUv, 0.001, 0.999)).r;
+	float g = texture2D(uTexture, clamp(gUv, 0.001, 0.999)).g;
+	float b = texture2D(uTexture, clamp(bUv, 0.001, 0.999)).b;
+
+	// Specular liquid sheen highlight
+	float highlight = pow(influence, 2.5) * ripple * 0.08 * uHover;
+	vec3 color = vec3(r, g, b) + vec3(highlight * 0.9, highlight * 1.1, highlight * 1.3);
+
+	gl_FragColor = vec4(color, 1.0);
+}
+`;
+
+function initIntroLiquidWebGL() {
+	if ( ! introBgCanvas ) return;
+	liquidGl = introBgCanvas.getContext( 'webgl', { antialias: true, alpha: false } );
+	if ( ! liquidGl ) return;
+
+	const gl = liquidGl;
+
+	function createShader( type, source ) {
+		const s = gl.createShader( type );
+		gl.shaderSource( s, source );
+		gl.compileShader( s );
+		if ( ! gl.getShaderParameter( s, gl.COMPILE_STATUS ) ) {
+			console.warn( gl.getShaderInfoLog( s ) );
+			gl.deleteShader( s );
+			return null;
+		}
+		return s;
+	}
+
+	const vs = createShader( gl.VERTEX_SHADER, VS_LIQUID );
+	const fs = createShader( gl.FRAGMENT_SHADER, FS_LIQUID );
+	liquidProgram = gl.createProgram();
+	gl.attachShader( liquidProgram, vs );
+	gl.attachShader( liquidProgram, fs );
+	gl.linkProgram( liquidProgram );
+	gl.useProgram( liquidProgram );
+
+	// Full-screen quad
+	const quadBuffer = gl.createBuffer();
+	gl.bindBuffer( gl.ARRAY_BUFFER, quadBuffer );
+	gl.bufferData( gl.ARRAY_BUFFER, new Float32Array( [
+		- 1, - 1,
+		  1, - 1,
+		- 1,   1,
+		- 1,   1,
+		  1, - 1,
+		  1,   1
+	] ), gl.STATIC_DRAW );
+
+	const posAttr = gl.getAttribLocation( liquidProgram, 'position' );
+	gl.enableVertexAttribArray( posAttr );
+	gl.vertexAttribPointer( posAttr, 2, gl.FLOAT, false, 0, 0 );
+
+	// Texture loader
+	liquidTex = gl.createTexture();
+	const img = new Image();
+	img.crossOrigin = 'anonymous';
+	img.src = 'https://mbrissette.x02.me/i/heX18A.jpeg';
+	img.onload = () => {
+		gl.bindTexture( gl.TEXTURE_2D, liquidTex );
+		gl.pixelStorei( gl.UNPACK_FLIP_Y_WEBGL, true );
+		gl.texImage2D( gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img );
+		gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
+		gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE );
+		gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR );
+		gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+
+		const uImgRes = gl.getUniformLocation( liquidProgram, 'uImageRes' );
+		gl.uniform2f( uImgRes, img.width || 1920, img.height || 1080 );
+		liquidLoaded = true;
+	};
+
+	function resizeLiquid() {
+		introBgCanvas.width = innerWidth;
+		introBgCanvas.height = innerHeight;
+		gl.viewport( 0, 0, innerWidth, innerHeight );
+		gl.useProgram( liquidProgram );
+		const uRes = gl.getUniformLocation( liquidProgram, 'uResolution' );
+		gl.uniform2f( uRes, innerWidth, innerHeight );
+	}
+	resizeLiquid();
+	window.addEventListener( 'resize', resizeLiquid );
+
+	const uMouse = gl.getUniformLocation( liquidProgram, 'uMouse' );
+	const uVel = gl.getUniformLocation( liquidProgram, 'uVelocity' );
+	const uHov = gl.getUniformLocation( liquidProgram, 'uHover' );
+	const uTimeLoc = gl.getUniformLocation( liquidProgram, 'uTime' );
+
+	function renderLiquid( timestamp ) {
+		if ( transitionStarted ) return;
+
+		liquidState.time = timestamp * 0.001;
+
+		// Smooth mouse easing & velocity damping
+		liquidState.mouse[ 0 ] += ( liquidState.targetMouse[ 0 ] - liquidState.mouse[ 0 ] ) * 0.08;
+		liquidState.mouse[ 1 ] += ( liquidState.targetMouse[ 1 ] - liquidState.mouse[ 1 ] ) * 0.08;
+
+		const vx = ( liquidState.mouse[ 0 ] - liquidState.prevMouse[ 0 ] );
+		const vy = ( liquidState.mouse[ 1 ] - liquidState.prevMouse[ 1 ] );
+		liquidState.velocity[ 0 ] += ( vx - liquidState.velocity[ 0 ] ) * 0.15;
+		liquidState.velocity[ 1 ] += ( vy - liquidState.velocity[ 1 ] ) * 0.15;
+		liquidState.prevMouse[ 0 ] = liquidState.mouse[ 0 ];
+		liquidState.prevMouse[ 1 ] = liquidState.mouse[ 1 ];
+
+		liquidState.hoverIntensity += ( liquidState.targetHover - liquidState.hoverIntensity ) * 0.06;
+
+		if ( liquidLoaded ) {
+			gl.useProgram( liquidProgram );
+			gl.uniform2f( uMouse, liquidState.mouse[ 0 ], liquidState.mouse[ 1 ] );
+			gl.uniform2f( uVel, liquidState.velocity[ 0 ], liquidState.velocity[ 1 ] );
+			gl.uniform1f( uHov, liquidState.hoverIntensity );
+			gl.uniform1f( uTimeLoc, liquidState.time );
+			gl.drawArrays( gl.TRIANGLES, 0, 6 );
+		}
+
+		liquidRaf = requestAnimationFrame( renderLiquid );
+	}
+	liquidRaf = requestAnimationFrame( renderLiquid );
+}
+initIntroLiquidWebGL();
 
 // ═══════════════════════════════════════════════════════════════════
 //  Intro Ambient Dust / Charcoal Ash Motes & Mouse Parallax
@@ -2057,7 +2666,7 @@ if ( dustCanvas ) {
 	renderIntroDust();
 }
 
-// Subtle Mouse Parallax on Background & Title
+// Subtle Mouse Parallax & Liquid Shader Cursor Feed
 let targetMouseX = 0, targetMouseY = 0;
 let curMouseX = 0, curMouseY = 0;
 let parallaxRaf = null;
@@ -2068,6 +2677,14 @@ window.addEventListener( 'mousemove', ( e ) => {
 	const normY = ( e.clientY / innerHeight - 0.5 ) * 2;
 	targetMouseX = normX;
 	targetMouseY = normY;
+
+	liquidState.targetMouse[ 0 ] = e.clientX / innerWidth;
+	liquidState.targetMouse[ 1 ] = 1.0 - ( e.clientY / innerHeight );
+	liquidState.targetHover = 1.0;
+} );
+
+window.addEventListener( 'mouseleave', () => {
+	liquidState.targetHover = 0.0;
 } );
 
 function updateParallax() {
@@ -2075,9 +2692,6 @@ function updateParallax() {
 	curMouseX += ( targetMouseX - curMouseX ) * 0.05;
 	curMouseY += ( targetMouseY - curMouseY ) * 0.05;
 
-	if ( introBg ) {
-		introBg.style.transform = `scale(1.04) translate3d(${- curMouseX * 14}px, ${- curMouseY * 10}px, 0)`;
-	}
 	if ( introContent ) {
 		introContent.style.transform = `translate3d(${curMouseX * 8}px, ${curMouseY * 6}px, 0)`;
 	}
@@ -2092,6 +2706,7 @@ function startDissolve( durationMs = 1200 ) {
 
 	if ( introDustRaf ) cancelAnimationFrame( introDustRaf );
 	if ( parallaxRaf ) cancelAnimationFrame( parallaxRaf );
+	if ( liquidRaf ) cancelAnimationFrame( liquidRaf );
 
 	document.body.classList.add( 'hud-active' );
 
@@ -2147,7 +2762,7 @@ function returnOutside( durationMs = 1000 ) {
 	} catch ( _e ) {}
 	introVideo.style.opacity = '0';
 
-	if ( introBg ) introBg.style.opacity = '1';
+	if ( introBgCanvas ) introBgCanvas.style.opacity = '1';
 	if ( dustCanvas ) dustCanvas.style.opacity = '0.65';
 
 	if ( introLayer ) {
@@ -2179,9 +2794,38 @@ function returnOutside( durationMs = 1000 ) {
 			transitionStarted = false;
 			transitionCompleted = false;
 
-			// Restart dust and parallax loops
+			// Restart dust, liquid shader, and parallax loops
 			if ( typeof renderIntroDust === 'function' ) renderIntroDust();
 			if ( typeof updateParallax === 'function' ) updateParallax();
+			if ( liquidProgram && typeof requestAnimationFrame === 'function' ) {
+				liquidRaf = requestAnimationFrame( function resumeLiquid( t ) {
+					if ( transitionStarted ) return;
+					liquidState.time = t * 0.001;
+					liquidState.mouse[ 0 ] += ( liquidState.targetMouse[ 0 ] - liquidState.mouse[ 0 ] ) * 0.08;
+					liquidState.mouse[ 1 ] += ( liquidState.targetMouse[ 1 ] - liquidState.mouse[ 1 ] ) * 0.08;
+					const vx = ( liquidState.mouse[ 0 ] - liquidState.prevMouse[ 0 ] );
+					const vy = ( liquidState.mouse[ 1 ] - liquidState.prevMouse[ 1 ] );
+					liquidState.velocity[ 0 ] += ( vx - liquidState.velocity[ 0 ] ) * 0.15;
+					liquidState.velocity[ 1 ] += ( vy - liquidState.velocity[ 1 ] ) * 0.15;
+					liquidState.prevMouse[ 0 ] = liquidState.mouse[ 0 ];
+					liquidState.prevMouse[ 1 ] = liquidState.mouse[ 1 ];
+					liquidState.hoverIntensity += ( liquidState.targetHover - liquidState.hoverIntensity ) * 0.06;
+
+					if ( liquidLoaded && liquidGl ) {
+						liquidGl.useProgram( liquidProgram );
+						const uM = liquidGl.getUniformLocation( liquidProgram, 'uMouse' );
+						const uV = liquidGl.getUniformLocation( liquidProgram, 'uVelocity' );
+						const uH = liquidGl.getUniformLocation( liquidProgram, 'uHover' );
+						const uT = liquidGl.getUniformLocation( liquidProgram, 'uTime' );
+						liquidGl.uniform2f( uM, liquidState.mouse[ 0 ], liquidState.mouse[ 1 ] );
+						liquidGl.uniform2f( uV, liquidState.velocity[ 0 ], liquidState.velocity[ 1 ] );
+						liquidGl.uniform1f( uH, liquidState.hoverIntensity );
+						liquidGl.uniform1f( uT, liquidState.time );
+						liquidGl.drawArrays( liquidGl.TRIANGLES, 0, 6 );
+					}
+					liquidRaf = requestAnimationFrame( resumeLiquid );
+				} );
+			}
 		}
 	}
 	requestAnimationFrame( fadeInStep );
@@ -2222,7 +2866,7 @@ if ( enterBtn && introVideo ) {
 
 		// 3) Reveal and play transition video
 		introVideo.style.opacity = '1';
-		introBg.style.opacity = '0';
+		if ( introBgCanvas ) introBgCanvas.style.opacity = '0';
 		if ( dustCanvas ) dustCanvas.style.opacity = '0';
 
 		introVideo.currentTime = 0;
