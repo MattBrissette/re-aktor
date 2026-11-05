@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Obscurial - Cherenkov</title>
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #121820;
+    color: #e2f0e8;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  #c {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    outline: none;
+  }
+
+  #vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 45%, rgba(18, 25, 34, 0.35) 75%, rgba(10, 14, 20, 0.75) 100%);
+    z-index: 10;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     Intro Screen & Transition Video Overlay
+     ═══════════════════════════════════════════════════════════════════ */
+  #intro-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    pointer-events: auto;
+    opacity: 1;
+    will-change: opacity;
+    overflow: hidden;
+  }
+
+  #intro-bg {
+    position: absolute;
+    inset: -30px;
+    background-image: url('https://mbrissette.x02.me/i/heX18A.jpeg');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    transform: scale(1.04);
+    transition: transform 0.25s ease-out, opacity 0.8s ease;
+    will-change: opacity, transform;
+  }
+
+  #intro-dust-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.65;
+  }
+
+  #intro-overlay-shade {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(14, 18, 22, 0.10) 0%, rgba(10, 13, 16, 0.42) 65%, rgba(6, 8, 10, 0.82) 100%),
+                linear-gradient(180deg, rgba(8, 11, 14, 0.25) 0%, rgba(6, 8, 10, 0.6) 100%);
+    pointer-events: none;
+    transition: opacity 1.1s cubic-bezier(0.25, 1, 0.5, 1);
+    will-change: opacity;
+  }
+
+  #intro-content {
+    position: relative;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 24px;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+  }
+
+  #intro-title {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    font-size: clamp(42px, 8vw, 84px);
+    font-weight: 800;
+    letter-spacing: 0.28em;
+    text-indent: 0.28em;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-shadow: 0 0 32px rgba(0, 212, 255, 0.35), 0 4px 20px rgba(0, 0, 0, 0.8);
+    margin-bottom: 30px;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.65));
+  }
+
+  #enter-silo-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 38px;
+    padding: 0 28px;
+    border-radius: 2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-indent: 0.22em;
+    text-transform: uppercase;
+    color: rgba(220, 232, 240, 0.82);
+    cursor: pointer;
+    background: rgba(18, 24, 28, 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  #enter-silo-btn:hover {
+    background: rgba(25, 34, 40, 0.85);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.75), 0 0 16px rgba(0, 212, 255, 0.12);
+  }
+
+  #enter-silo-btn:active {
+    background: rgba(12, 17, 20, 0.9);
+    transform: scale(0.985);
+  }
+
+  #enter-silo-btn svg {
+    width: 7px;
+    height: 7px;
+    fill: currentColor;
+    opacity: 0.75;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  #enter-silo-btn:hover svg {
+    opacity: 1;
+    transform: translateX(2px);
+  }
+
+  .intro-audio-hint {
+    margin-top: 18px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .intro-audio-hint svg {
+    width: 10px;
+    height: 10px;
+    fill: currentColor;
+    opacity: 0.6;
+  }
+
+  #intro-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease-out;
+    will-change: opacity;
+  }
+
+  /* HUD elements hidden initially during intro sequence */
+  #title-block,
+  #audio-player-hud {
+    opacity: 0;
+    transition: opacity 1.2s ease-out;
+    will-change: opacity;
+  }
+
+  body.hud-active #title-block,
+  body.hud-active #audio-player-hud {
+    opacity: 1;
+  }
+
+  #title-block {
+    position: fixed;
+    top: 28px;
+    left: 32px;
+    pointer-events: auto;
+    z-index: 20;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.95);
+    cursor: pointer;
+    transition: opacity 1.2s ease-out, transform 0.25s ease;
+  }
+
+  #title-block:hover {
+    transform: translateX(2px);
+  }
+
+  #title-block:hover #title-eyebrow {
+    color: #00d4ff;
+    text-shadow: 0 0 16px rgba(0, 212, 255, 0.65);
+  }
+
+  #title-eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+    font-weight: 600;
+    margin-bottom: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    transition: color 0.25s ease, text-shadow 0.25s ease;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     Minimalist Cyan Equalizer Wave Widget (Top-Right)
+     ═══════════════════════════════════════════════════════════════════ */
+  #audio-player-hud {
+    position: fixed;
+    top: 28px;
+    right: 32px;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 18px;
+    padding: 6px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    pointer-events: auto;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+  }
+
+  #audio-player-hud:hover {
+    transform: scale(1.12);
+  }
+
+  .audio-eq-bar {
+    width: 3.5px;
+    background-color: #ffffff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 0 0 14px rgba(255, 255, 255, 0.45);
+    border-radius: 9999px;
+    height: 3.5px;
+    min-height: 3.5px;
+    transition: height 0.08s ease-out, opacity 0.3s ease;
+  }
+
+  #audio-player-hud.audio-playing .audio-eq-bar {
+    animation: none;
+  }
+
+  #audio-player-hud.audio-paused {
+    opacity: 0.45;
+  }
+
+  #audio-player-hud.audio-paused .audio-eq-bar {
+    animation: none;
+    height: 3.5px !important;
+  }
+
+  /* Custom standalone floating Apple liquid glass pill button */
+  #controls-toggle-btn {
+    display: none !important;
+  }
+
+  #controls-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(0, 212, 255, 0.45);
+    box-shadow: 
+      0 6px 24px rgba(0, 0, 0, 0.5),
+      0 0 16px rgba(0, 212, 255, 0.25),
+      inset 0 1px 1.5px rgba(255, 255, 255, 0.75),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+    transform: scale(1.025);
+  }
+
+  #controls-toggle-btn:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.97);
+  }
+
+  #pane-container {
+    display: none !important;
+  }
+
+  #pane-container.pane-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     Bespoke Apple Glass HUD Controls
+     ═══════════════════════════════════════════════════════════════════ */
+  .apple-glass-card {
+    width: 295px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.075);
+    backdrop-filter: blur(36px) saturate(210%);
+    -webkit-backdrop-filter: blur(36px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 
+      0 24px 50px rgba(0, 0, 0, 0.55),
+      inset 0 1px 1.5px rgba(255, 255, 255, 0.5),
+      inset 0 -1px 1px rgba(0, 0, 0, 0.25);
+    padding: 14px 14px 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  }
+
+  .glass-section {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    padding: 10px 12px 12px 12px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .glass-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e6f6ff;
+    letter-spacing: -0.015em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 2px;
+  }
+
+  .glass-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .glass-label {
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.72);
+    letter-spacing: -0.01em;
+    min-width: 82px;
+    flex-shrink: 0;
+  }
+
+  .glass-slider-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  input[type="range"].glass-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  input[type="range"].glass-range:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+
+  input[type="range"].glass-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.4),
+      0 0 10px rgba(0, 212, 255, 0.55);
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type="range"].glass-range::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.15);
+    box-shadow: 
+      0 3px 8px rgba(0, 0, 0, 0.5),
+      0 0 14px rgba(0, 212, 255, 0.8);
+  }
+
+  input[type="range"].glass-range::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 
+      0 2px 6px rgba(0, 0, 0, 0.4),
+      0 0 10px rgba(0, 212, 255, 0.55);
+    cursor: grab;
+  }
+
+  .glass-badge {
+    min-width: 44px;
+    text-align: right;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: #00d4ff;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 7px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+  }
+
+  .glass-switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 22px;
+  }
+
+  .glass-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .glass-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-switch-slider::before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .glass-switch input:checked + .glass-switch-slider {
+    background: #00d4ff;
+    border-color: #00d4ff;
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.5);
+  }
+
+  .glass-switch input:checked + .glass-switch-slider::before {
+    transform: translateX(16px);
+  }
+
+  #loader {
+    position: fixed;
+    inset: 0;
+    background: #030605;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    z-index: 100;
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+  }
+
+  #loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+  }
+
+  .dot {
+    animation: blink 1.4s infinite both;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
+  }
+
+  @media (max-width: 640px) {
+    #title-block {
+      top: 18px;
+      left: 18px;
+    }
+    #audio-player-hud {
+      top: 18px;
+      right: 18px;
+    }
+    #pane-container {
+      top: 14px;
+      right: 14px;
+    }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.webgpu.js",
+    "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.webgpu.js",
+    "three/tsl": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.tsl.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
+    "tweakpane": "https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- Intro Screen & Video Layer -->
+<div id="intro-layer">
+  <div id="intro-bg"></div>
+  <canvas id="intro-dust-canvas"></canvas>
+  <div id="intro-overlay-shade"></div>
+
+  <video id="intro-video" playsinline preload="auto">
+    <source src="https://mbrissette.x02.me/i/T7GCLA.mp4" type="video/mp4">
+  </video>
+  <div id="intro-content">
+    <h1 id="intro-title">RE-AKTOR</h1>
+    <button id="enter-silo-btn" type="button">
+      <span>ENTER THE SILO</span>
+      <svg viewBox="0 0 16 16"><path d="M5 3l7 5-7 5V3z"/></svg>
+    </button>
+    <div class="intro-audio-hint">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9v7c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a7 7 0 1 1 14 0h-2a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2c1.1 0 2-.9 2-2v-7a9 9 0 0 0-9-9z"/></svg>
+      <span>Sound recommended</span>
+    </div>
+  </div>
+</div>
+
+<!-- Audio Player Element & Tactical HUD -->
+<audio id="silo-audio" loop preload="auto" crossorigin="anonymous">
+  <source src="https://mbrissette.x02.me/i/Obx2ZX.mp3" type="audio/mpeg">
+</audio>
+
+<div id="audio-player-hud" class="audio-playing" title="Toggle audio playback" aria-label="Toggle audio playback">
+  <div class="audio-eq-bar" id="eq-b1"></div>
+  <div class="audio-eq-bar" id="eq-b2"></div>
+  <div class="audio-eq-bar" id="eq-b3"></div>
+  <div class="audio-eq-bar" id="eq-b4"></div>
+</div>
+
+<button id="controls-toggle-btn" type="button" aria-label="Toggle Controls">Controls</button>
+
+<div id="pane-container" class="pane-hidden">
+  <div class="apple-glass-card">
+    <!-- Flow Section -->
+    <div class="glass-section">
+      <div class="glass-section-title">
+        <span>Flow</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">turbulence</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-turbulence" min="0" max="8" step="0.05" value="0.7">
+        </div>
+        <span class="glass-badge" id="val-turbulence">0.70</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">flowFreq</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-flowFreq" min="0.3" max="4" step="0.05" value="1.35">
+        </div>
+        <span class="glass-badge" id="val-flowFreq">1.35</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">flowSpeed</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-flowSpeed" min="0" max="0.6" step="0.01" value="0.11">
+        </div>
+        <span class="glass-badge" id="val-flowSpeed">0.11</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">lump</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-lump" min="0" max="0.6" step="0.02" value="0.20">
+        </div>
+        <span class="glass-badge" id="val-lump">0.20</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">rubber band</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-spring" min="0" max="8" step="0.1" value="5.2">
+        </div>
+        <span class="glass-badge" id="val-spring">5.20</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">damping</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-damping" min="0.2" max="8" step="0.1" value="3.2">
+        </div>
+        <span class="glass-badge" id="val-damping">3.20</span>
+      </div>
+    </div>
+
+    <!-- Cherenkov Pulse Section -->
+    <div class="glass-section">
+      <div class="glass-section-title">
+        <span>Cherenkov Pulse</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">auto pulse</span>
+        <label class="glass-switch">
+          <input type="checkbox" id="ctrl-pulse" checked>
+          <span class="glass-switch-slider"></span>
+        </label>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">every min (s)</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulseMin" min="0.5" max="15" step="0.5" value="5.0">
+        </div>
+        <span class="glass-badge" id="val-pulseMin">5.00</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">every max (s)</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulseMax" min="0.5" max="15" step="0.5" value="9.5">
+        </div>
+        <span class="glass-badge" id="val-pulseMax">9.50</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">flare</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulseGain" min="0" max="8" step="0.05" value="0.90">
+        </div>
+        <span class="glass-badge" id="val-pulseGain">0.90</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">tint swarm</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulseTint" min="0" max="1" step="0.01" value="0.56">
+        </div>
+        <span class="glass-badge" id="val-pulseTint">0.56</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">pierce crust</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulsePierce" min="0" max="1" step="0.01" value="0.24">
+        </div>
+        <span class="glass-badge" id="val-pulsePierce">0.24</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">bloom boost</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulseBloom" min="0" max="3" step="0.05" value="1.00">
+        </div>
+        <span class="glass-badge" id="val-pulseBloom">1.00</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">light wander</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-pulseWander" min="0" max="0.6" step="0.05" value="0.50">
+        </div>
+        <span class="glass-badge" id="val-pulseWander">0.50</span>
+      </div>
+    </div>
+
+    <!-- Environment & Atmosphere Section -->
+    <div class="glass-section">
+      <div class="glass-section-title">
+        <span>Environment &amp; Atmosphere</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">darkness</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-exposure" min="0.2" max="2.2" step="0.05" value="1.30">
+        </div>
+        <span class="glass-badge" id="val-exposure">1.30</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">fog density</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-fog" min="0.00" max="0.06" step="0.002" value="0.018">
+        </div>
+        <span class="glass-badge" id="val-fog">0.018</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">oculus light</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-moonLight" min="0" max="300" step="5" value="200">
+        </div>
+        <span class="glass-badge" id="val-moonLight">200.0</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">ambient</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-ambient" min="0.02" max="0.5" step="0.01" value="0.12">
+        </div>
+        <span class="glass-badge" id="val-ambient">0.12</span>
+      </div>
+      <div class="glass-row">
+        <span class="glass-label">light shaft</span>
+        <div class="glass-slider-wrap">
+          <input type="range" class="glass-range" id="ctrl-shafts" min="0" max="3.0" step="0.05" value="0.70">
+        </div>
+        <span class="glass-badge" id="val-shafts">0.70</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="vignette"></div>
+<div id="title-block" role="button" tabindex="0" title="Return outside" aria-label="Return outside">
+  <span id="title-eyebrow">re-aktor</span>
+</div>
+<div id="loader"><div class="spinner"></div><div class="loading-text">loading<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div></div>
+
+<script>
+  const __fail = (msg) => {
+    const l = document.getElementById('loader');
+    if (!l) return;
+    l.classList.remove('hidden');
+    const sp = l.querySelector('.spinner'); if (sp) sp.style.display = 'none';
+    const t = l.querySelector('.loading-text');
+    if (t) t.textContent = 'error — ' + msg;
+  };
+  window.addEventListener('error', e => __fail(e.message || 'script error'));
+  window.addEventListener('unhandledrejection', e =>
+    __fail(e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+</script>
+
+<script type="module">
+import * as THREE from 'three/webgpu';
+import {
+	Fn, uniform, instanceIndex, instancedArray, vec2, vec3, vec4, float, int, uint, uvec3, uv,
+	length, normalize, dot, cross, mix, smoothstep, exp, max, sqrt, fract, clamp, floor,
+	mx_noise_vec3, mx_noise_float, mx_fractal_noise_float, hash, time, sin, cos, atan, abs, sign, pow, mod,
+	positionWorld, positionView, normalView, step, min, reflector, If, Loop, atomicAdd, atomicLoad, atomicStore,
+	textureStore, texture3D, screenUV, screenCoordinate, pass
+} from 'three/tsl';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const BUILD = 'v2.8-re-aktor';
+console.log( BUILD );
+
+// ═══════════════════════════════════════════════════════════════════
+//  renderer / scene / primary & secondary cameras
+// ═══════════════════════════════════════════════════════════════════
+
+const renderer = new THREE.WebGPURenderer( { canvas: document.getElementById( 'c' ), antialias: false } );
+renderer.setPixelRatio( Math.min( devicePixelRatio, 1.5 ) );
+renderer.setSize( Math.max( innerWidth, 8 ), Math.max( innerHeight, 8 ) );
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.30;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.autoClear = false;
+
+try { await renderer.init(); }
+catch ( e ) {
+	throw new Error( 'this browser could not start WebGPU or WebGL2' );
+}
+
+const isWebGL = renderer.backend.isWebGLBackend === true;
+const isMobile = matchMedia( '(pointer: coarse)' ).matches;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color( 0x11161d );
+scene.fog = new THREE.FogExp2( 0x10151c, 0.013 );
+
+// Primary interactive camera
+const camera = new THREE.PerspectiveCamera( 38, innerWidth / innerHeight, 0.05, 60 );
+const fitDistance = () => ( innerWidth / innerHeight < 0.8 ? 8.2 : 6.6 );
+camera.position.set( 0.0, 0.85, fitDistance() );
+{ const qc = new URLSearchParams( location.search ).get( 'cam' ); if ( qc ) camera.position.fromArray( qc.split( ',' ).map( Number ) ); }
+
+const controls = new OrbitControls( camera, renderer.domElement );
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 2.2;
+controls.maxDistance = 12.0;
+controls.maxPolarAngle = 1.78;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.35;
+controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE };
+
+// ═══════════════════════════════════════════════════════════════════
+//  particle data
+// ═══════════════════════════════════════════════════════════════════
+
+const qn = parseInt( new URLSearchParams( location.search ).get( 'n' ) || '0', 10 );
+const COUNT = qn > 0 ? qn : isWebGL ? 131072 : ( isMobile ? 196608 : 524288 );
+
+const posArr  = new Float32Array( COUNT * 4 );
+const velArr  = new Float32Array( COUNT * 4 );
+const homeArr = new Float32Array( COUNT * 4 );
+
+for ( let i = 0; i < COUNT; i ++ ) {
+
+	let x, y, z, l;
+	do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; z = Math.random() * 2 - 1; l = x * x + y * y + z * z; } while ( l > 1 || l < 1e-4 );
+	l = Math.sqrt( l ); x /= l; y /= l; z /= l;
+
+	let r;
+	if ( Math.random() < 0.72 ) r = 0.80 + 0.20 * Math.pow( Math.random(), 0.45 );
+	else r = 0.78 * Math.cbrt( Math.random() );
+
+	const k = i * 4;
+	homeArr[ k ] = x * r; homeArr[ k + 1 ] = y * r; homeArr[ k + 2 ] = z * r; homeArr[ k + 3 ] = Math.random();
+	posArr[ k ] = x * r; posArr[ k + 1 ] = y * r; posArr[ k + 2 ] = z * r; posArr[ k + 3 ] = 1;
+
+}
+
+const posB  = instancedArray( posArr,  'vec4' );
+const velB  = instancedArray( velArr,  'vec4' );
+const homeB = instancedArray( homeArr, 'vec4' );
+
+// ═══════════════════════════════════════════════════════════════════
+//  parameters / uniforms (Cherenkov Pulse & Atmosphere Defaults)
+// ═══════════════════════════════════════════════════════════════════
+
+const P = {
+	turbulence: 0.7, flowFreq: 1.35, flowSpeed: 0.11, lump: 0.2, lumpFreq: 1.25,
+	spring: 5.2, damping: 3.2,
+	radius: 0.30, push: 4.0, swirl: 14.35, dive: - 10.0, drag: 4.62, hover: 0.35, autoStir: true,
+	size: 0.0068, alpha: 0.85, grey: '#242a32', ember: '#e89466', coreGain: 2.2,
+	shellIn: 0.70, shellOut: 0.86, spill: 0.65, fall: 2.8,
+	bloomStrength: 1.05, bloomRadius: 0.58, bloomThreshold: 0.42, exposure: 1.30,
+	shadows: true, veil: 0.85, extinction: 5.5, redExtinction: 3.2, sun: 1.15, ambient: 0.12,
+	haze: ! isMobile, hazeGain: 1.75, hazeDensity: 0.55,
+	environment: true, emberLight: 12, moonLight: 200.0, reflections: ! isMobile, fog: 0.018, shafts: 0.70, dust: 1.0,
+	pulse: true, pulseMin: 5.0, pulseMax: 9.5, pulseGain: 0.90, pulseTint: 0.56, pulsePierce: 0.24, pulseBloom: 1.00, pulseWander: 0.50,
+};
+
+const uTime = uniform( 0 ), uDt = uniform( 1 / 60 );
+const uTurb = uniform( P.turbulence ), uFreq = uniform( P.flowFreq ), uFlowSpeed = uniform( P.flowSpeed );
+const uLump = uniform( P.lump ), uLumpFreq = uniform( P.lumpFreq );
+const uSpring = uniform( P.spring ), uDamp = uniform( P.damping );
+const uRayO = uniform( new THREE.Vector3( 0, 0, 10 ) ), uRayD = uniform( new THREE.Vector3( 0, 0, - 1 ) );
+const uPtr = uniform( 0 ), uPtrVel = uniform( new THREE.Vector3() );
+const uRad = uniform( P.radius ), uPush = uniform( P.push ), uSwirl = uniform( P.swirl ), uDive = uniform( P.dive ), uDrag = uniform( P.drag );
+
+const uSize = uniform( P.size ), uAlpha = uniform( P.alpha );
+const uGrey = uniform( new THREE.Color( P.grey ) );
+const uCoreGain = uniform( P.coreGain ), uShellIn = uniform( P.shellIn ), uShellOut = uniform( P.shellOut );
+const uSpill = uniform( P.spill ), uFall = uniform( P.fall );
+const uLightDir = uniform( new THREE.Vector3( 0.15, 0.96, 0.22 ).normalize() );
+const uRedPos = uniform( new THREE.Vector3( 0.05, - 0.38, 0.1 ) );
+const uPulse = uniform( 0 ), uPulseGain = uniform( P.pulseGain ), uPulseTint = uniform( P.pulseTint ), uPulsePierce = uniform( P.pulsePierce );
+const uExt = uniform( P.extinction ), uExtRed = uniform( P.redExtinction ), uSun = uniform( P.sun ), uAmb = uniform( P.ambient );
+const uViewOcc = uniform( P.veil ), uShadowMix = uniform( 1 ), uHazeGain = uniform( P.hazeGain ), uHazeDens = uniform( P.hazeDensity );
+const uInvVP = uniform( new THREE.Matrix4() ), uCamPos = uniform( new THREE.Vector3() );
+
+// ═══════════════════════════════════════════════════════════════════
+//  curl noise
+// ═══════════════════════════════════════════════════════════════════
+
+// Procedural cold-press watercolor paper tooth and pigment pooling nodes
+const paperGrain = Fn( ( [ p ] ) => {
+	const fineTooth = mx_noise_float( p.mul( 85.0 ) ).mul( 0.5 ).add( 0.5 );
+	const coarseFiber = mx_noise_float( p.mul( 24.0 ) ).mul( 0.5 ).add( 0.5 );
+	return fineTooth.mul( 0.65 ).add( coarseFiber.mul( 0.35 ) );
+} );
+
+// Watercolor drying edge fringe (pigment pooling at fluid boundary)
+const washEdge = Fn( ( [ val, threshold, width ] ) => {
+	const d = abs( val.sub( threshold ) );
+	return smoothstep( width, float( 0.0 ), d );
+} );
+
+const curl = Fn( ( [ p ] ) => {
+
+	const e = 0.09;
+	const n  = mx_noise_vec3( p );
+	const nx = mx_noise_vec3( p.add( vec3( e, 0, 0 ) ) ).sub( n );
+	const ny = mx_noise_vec3( p.add( vec3( 0, e, 0 ) ) ).sub( n );
+	const nz = mx_noise_vec3( p.add( vec3( 0, 0, e ) ) ).sub( n );
+	return vec3( ny.z.sub( nz.y ), nz.x.sub( nx.z ), nx.y.sub( ny.x ) ).div( e );
+
+} );
+
+// ═══════════════════════════════════════════════════════════════════
+//  particle simulation
+// ═══════════════════════════════════════════════════════════════════
+
+const update = Fn( () => {
+
+	const P4 = posB.element( instanceIndex );
+	const V4 = velB.element( instanceIndex );
+	const H4 = homeB.element( instanceIndex );
+
+	const p = P4.xyz.toVar();
+	const v = V4.xyz.toVar();
+	const h = H4.xyz;
+
+	const lq = h.mul( uLumpFreq ).add( vec3( 3.1, uTime.mul( 0.06 ), 7.7 ) );
+	const lump = mx_noise_float( lq ).add( mx_noise_float( lq.mul( 2.7 ) ).mul( 0.45 ) );
+	const target = h.mul( lump.mul( uLump ).add( 1.0 ) );
+
+	const q = p.mul( uFreq ).add( vec3( uTime.mul( uFlowSpeed ), uTime.mul( uFlowSpeed ).mul( 0.6 ), 11.0 ) );
+	const flow = curl( q ).add( curl( q.mul( 2.3 ).add( 5.0 ) ).mul( 0.35 ) );
+	v.addAssign( flow.mul( uTurb ).mul( uDt ) );
+
+	v.addAssign( target.sub( p ).mul( uSpring ).mul( uDt ) );
+
+	const rel = p.sub( uRayO );
+	const along = max( dot( rel, uRayD ), 0.0 );
+	const d = rel.sub( uRayD.mul( along ) );
+	const dist = max( length( d ), 1e-4 );
+	const nrm = d.div( dist );
+	const f = exp( dist.mul( dist ).div( uRad.mul( uRad ) ).negate() ).mul( uPtr );
+	const kick = nrm.mul( uPush ).add( cross( uRayD, nrm ).mul( uSwirl ) ).add( uRayD.mul( uDive ) );
+	v.addAssign( kick.mul( f ).mul( uDt ) );
+	v.addAssign( uPtrVel.mul( f ).mul( uDrag ) );
+
+	v.mulAssign( exp( uDamp.mul( uDt ).negate() ) );
+	p.addAssign( v.mul( uDt ) );
+
+	P4.assign( vec4( p, P4.w ) );
+	V4.assign( vec4( v, 0.0 ) );
+
+} )().compute( COUNT );
+
+// ═══════════════════════════════════════════════════════════════════
+//  density volume
+// ═══════════════════════════════════════════════════════════════════
+
+const VOL = ! isWebGL;
+const B = 1.9;
+const G = isMobile ? 56 : 72;
+const LG = isMobile ? 32 : 48;
+const SUN_STEPS = 8, RED_STEPS = 8, VIEW_STEPS = 8, HAZE_STEPS = isMobile ? 14 : 18;
+const toGrid = ( wp ) => wp.div( B * 2 ).add( 0.5 );
+
+let densTex = null, lightTex = null, densityPasses = [], lightPasses = [];
+
+if ( VOL ) {
+
+	const G3 = G * G * G;
+	const gridBuf = instancedArray( G3, 'uint' ).toAtomic();
+	const uDensNorm = uniform( ( 524288 / COUNT ) / 20 * Math.pow( G / 72, 3 ) );
+
+	densTex = new THREE.Storage3DTexture( G, G, G );
+	densTex.type = THREE.HalfFloatType;
+	lightTex = new THREE.Storage3DTexture( LG, LG, LG );
+	lightTex.type = THREE.HalfFloatType;
+
+	const clearGrid = Fn( () => {
+		atomicStore( gridBuf.element( instanceIndex ), uint( 0 ) );
+	} )().compute( G3 );
+
+	const splat = Fn( () => {
+		const g = toGrid( posB.element( instanceIndex ).xyz ).mul( G ).toVar();
+		If( g.x.greaterThanEqual( 0 ).and( g.y.greaterThanEqual( 0 ) ).and( g.z.greaterThanEqual( 0 ) )
+			.and( g.x.lessThan( G ) ).and( g.y.lessThan( G ) ).and( g.z.lessThan( G ) ), () => {
+			const c = uvec3( floor( g ) );
+			atomicAdd( gridBuf.element( c.x.add( c.y.mul( G ) ).add( c.z.mul( G * G ) ) ), uint( 1 ) );
+		} );
+	} )().compute( COUNT );
+
+	const cellIndex = ( x, y, z ) => uint(
+		clamp( x, int( 0 ), int( G - 1 ) )
+			.add( clamp( y, int( 0 ), int( G - 1 ) ).mul( G ) )
+			.add( clamp( z, int( 0 ), int( G - 1 ) ).mul( G * G ) )
+	);
+
+	const tmpA = instancedArray( G3, 'float' );
+	const tmpB = instancedArray( G3, 'float' );
+	const W3 = [ 0.25, 0.5, 0.25 ];
+	const gx = ( i ) => int( i.mod( G ) );
+	const gy = ( i ) => int( i.div( G ).mod( G ) );
+	const gz = ( i ) => int( i.div( G * G ) );
+
+	const blurX = Fn( () => {
+		const i = instanceIndex;
+		const x = gx( i ).toVar(), y = gy( i ).toVar(), z = gz( i ).toVar();
+		const s = float( 0 ).toVar();
+		for ( let d = - 1; d <= 1; d ++ ) s.addAssign( float( atomicLoad( gridBuf.element( cellIndex( x.add( d ), y, z ) ) ) ).mul( W3[ d + 1 ] ) );
+		tmpA.element( i ).assign( s );
+	} )().compute( G3 );
+
+	const blurY = Fn( () => {
+		const i = instanceIndex;
+		const x = gx( i ).toVar(), y = gy( i ).toVar(), z = gz( i ).toVar();
+		const s = float( 0 ).toVar();
+		for ( let d = - 1; d <= 1; d ++ ) s.addAssign( tmpA.element( cellIndex( x, y.add( d ), z ) ).mul( W3[ d + 1 ] ) );
+		tmpB.element( i ).assign( s );
+	} )().compute( G3 );
+
+	const blurZ = Fn( () => {
+		const i = instanceIndex;
+		const x = gx( i ).toVar(), y = gy( i ).toVar(), z = gz( i ).toVar();
+		const s = float( 0 ).toVar();
+		for ( let d = - 1; d <= 1; d ++ ) s.addAssign( tmpB.element( cellIndex( x, y, z.add( d ) ) ).mul( W3[ d + 1 ] ) );
+		textureStore( densTex, uvec3( x, y, z ), vec4( s.mul( uDensNorm ), 0, 0, 1 ) );
+	} )().compute( G3 );
+
+	const densAt = ( wp ) => texture3D( densTex, toGrid( wp ) ).level( 0 ).r;
+
+	const lightPass = Fn( () => {
+		const i = instanceIndex;
+		const x = i.mod( LG ), y = i.div( LG ).mod( LG ), z = i.div( LG * LG );
+		const wp = vec3( float( x ), float( y ), float( z ) ).add( 0.5 ).div( LG ).sub( 0.5 ).mul( B * 2 ).toVar();
+
+		const dsS = 1.7 / SUN_STEPS;
+		const accS = float( 0 ).toVar();
+		Loop( SUN_STEPS, ( { i: k } ) => {
+			accS.addAssign( densAt( wp.add( uLightDir.mul( float( k ).add( 0.5 ).mul( dsS ) ) ) ) );
+		} );
+		const tSun = exp( accS.mul( dsS ).mul( uExt ).negate() );
+
+		const toL = uRedPos.sub( wp ).toVar();
+		const dsR = length( toL ).div( RED_STEPS );
+		const accR = float( 0 ).toVar();
+		Loop( RED_STEPS, ( { i: k } ) => {
+			accR.addAssign( densAt( wp.add( toL.mul( float( k ).add( 0.5 ).div( RED_STEPS ) ) ) ) );
+		} );
+		const tRed = exp( accR.mul( dsR ).mul( uExtRed ).mul( uPulse.mul( uPulsePierce ).oneMinus() ).negate() );
+
+		const toC = normalize( uCamPos.sub( wp ) ).toVar();
+		const dsV = 2.2 / VIEW_STEPS;
+		const accV = float( 0 ).toVar();
+		Loop( VIEW_STEPS, ( { i: k } ) => {
+			accV.addAssign( densAt( wp.add( toC.mul( float( k ).add( 1.0 ).mul( dsV ) ) ) ) );
+		} );
+		const tView = exp( accV.mul( dsV ).mul( uExt ).negate() );
+
+		textureStore( lightTex, uvec3( x, y, z ), vec4( tSun, tRed, tView, 1 ) );
+	} )().compute( LG * LG * LG );
+
+	densityPasses = [ clearGrid, splat, blurX, blurY, blurZ ];
+	lightPasses = [ lightPass ];
+
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  particle material
+// ═══════════════════════════════════════════════════════════════════
+
+const material = new THREE.SpriteNodeMaterial( { transparent: true, depthWrite: true } );
+material.alphaTest = 0.08;
+
+const pAttr = posB.toAttribute().xyz;
+const hAttr = homeB.toAttribute();
+
+material.positionNode = pAttr;
+material.scaleNode = uSize.mul( hAttr.w.mul( 0.9 ).add( 0.55 ) );
+
+const colorNode = Fn( () => {
+
+	const hr = length( hAttr.xyz );
+	const core = smoothstep( uShellIn, uShellOut, hr ).oneMinus();
+
+	const L = VOL ? texture3D( lightTex, toGrid( pAttr ) ) : vec4( 1, 1, 1, 1 );
+	const tView = mix( float( 1 ), L.b, uShadowMix.mul( uViewOcc ) );
+	const tSun = mix( float( 1 ), L.r, uShadowMix );
+	const tRed = mix( float( 1 ), L.g, uShadowMix );
+
+	const N = normalize( pAttr );
+	const lam = dot( N, uLightDir ).mul( 0.5 ).add( 0.5 );
+	const grain = hAttr.w.mul( 0.35 ).add( 0.75 );
+
+	// Watercolor pigment granulation: charcoal ash with dark Payne's grey / stormy slate undertone
+	const ashGranule = mx_noise_float( pAttr.mul( 28.0 ) ).mul( 0.2 ).add( 0.9 );
+	const paynesGrey = vec3( 0.12, 0.16, 0.21 );
+	const ash = mix( uGrey, paynesGrey, float( 0.55 ) ).mul( uAmb.add( lam.mul( 0.6 ).add( 0.4 ).mul( tSun ).mul( uSun ) ) ).mul( grain ).mul( ashGranule );
+
+	const glow = exp( length( pAttr.sub( uRedPos ) ).mul( uFall ).negate() );
+	const flare = uPulse.mul( uPulseGain ).add( 1.0 );
+	const tint = uPulse.mul( uPulseTint );
+	const ashT = mix( ash, ash.mul( vec3( 0.42, 0.54, 0.68 ) ), tint );
+	const lit = glow.mul( 0.6 ).add( 0.4 ).mul( tRed );
+
+	// Painted watercolor sky hues from the painting:
+	// Stormy deep slate indigo (#2c3848, #3b4e63) transitioning to twilight peach & sunset amber (#d4875a, #f0a87a, #f7cb9e)
+	const stormySlate = vec3( 0.17, 0.23, 0.31 );
+	const twilightIndigo = vec3( 0.26, 0.36, 0.48 );
+	const peachGaze = vec3( 0.88, 0.54, 0.37 );
+	const sunsetAmber = vec3( 0.98, 0.72, 0.52 );
+
+	const skyCloudTone = mix( stormySlate, twilightIndigo, smoothstep( 0.1, 0.75, glow ) );
+	const skyAtmosphereC = mix( mix( skyCloudTone, peachGaze, glow ), sunsetAmber, uPulse.mul( 0.75 ) );
+
+	// Watercolor dry-brush edge pigment pooling on particles
+	const uvDist = length( uv().sub( 0.5 ) );
+	const pigmentRing = smoothstep( 0.48, 0.35, uvDist ).sub( smoothstep( 0.35, 0.20, uvDist ).mul( 0.3 ) );
+
+	const crust = ashT.add( skyAtmosphereC.mul( glow.mul( uSpill ).mul( tRed ).mul( flare ) ) ).add( skyAtmosphereC.mul( lit.mul( tint ).mul( 0.45 ) ) );
+	const ember = skyAtmosphereC.mul( uCoreGain ).mul( glow.mul( 0.7 ).add( 0.3 ) ).mul( mix( float( 0.25 ), float( 1 ), tRed ) ).mul( grain ).mul( flare );
+
+	return mix( crust, ember, core ).mul( tView ).mul( pigmentRing );
+
+} )();
+
+material.colorNode = colorNode;
+
+// Watercolor feathered splatter particle boundary with paper tooth interaction
+const pPaper = mx_noise_float( uv().mul( 12.0 ).add( pAttr.xy.mul( 4.0 ) ) ).mul( 0.12 );
+material.opacityNode = smoothstep( 0.5, float( 0.12 ).add( pPaper ), length( uv().sub( 0.5 ) ) ).mul( uAlpha );
+
+const particles = new THREE.Sprite( material );
+particles.count = COUNT;
+particles.frustumCulled = false;
+scene.add( particles );
+
+// ═══════════════════════════════════════════════════════════════════
+//  decommissioned cooling silo environment (Watercolor & Gouache Style)
+// ═══════════════════════════════════════════════════════════════════
+
+const SILO = { radius: 10.5, floor: - 2.8, ceil: 11.0, oculusRadius: 3.6 };
+const env = new THREE.Group();
+scene.add( env );
+
+const uShaft = uniform( P.shafts ), uDust = uniform( 1 );
+
+const bump = Fn( ( [ h, s ] ) => {
+	const p = positionView, n = normalView;
+	const dpdx = p.dFdx(), dpdy = p.dFdy();
+	const r1 = cross( dpdy, n ), r2 = cross( n, dpdx );
+	const det = dot( dpdx, r1 );
+	const grad = r1.mul( h.dFdx() ).add( r2.mul( h.dFdy() ) ).mul( sign( det ) );
+	return normalize( n.mul( abs( det ) ).sub( grad.mul( s ) ) );
+} );
+
+const fbm = ( p, o = 4 ) => mx_fractal_noise_float( p, o, 2.0, 0.5 );
+
+// Watercolor Wash, Ink Contour & Gouache Silo Wall Material
+const siloWallMat = new THREE.MeshStandardNodeMaterial( { side: THREE.BackSide } );
+{
+	const wp = positionWorld;
+	const angle = atan( wp.x.div( max( abs( wp.z ), 1e-4 ) ) );
+
+	// 1. Cold-press watercolor paper grain tooth across wall surfaces
+	const paperTooth = paperGrain( wp.mul( 0.65 ) );
+
+	// 2. Loose, hand-drawn ink linework (corrugated panel ring seams and vertical staves)
+	const corrugation = sin( wp.y.mul( 24.0 ) ).mul( 0.5 ).add( 0.5 );
+	const seamFrac = fract( wp.y.div( 2.2 ) ).sub( 0.5 );
+	const inkJitter = mx_noise_float( vec3( angle.mul( 32.0 ), wp.y.mul( 0.8 ), 1.7 ) ).mul( 0.015 );
+	const inkLine = smoothstep( 0.032, 0.005, abs( seamFrac ).add( inkJitter ) );
+
+	// 3. Wet-in-wet watercolor stain bleeding with pigment pooling borders
+	const rustWashNoise = fbm( vec3( angle.mul( 7.5 ), wp.y.mul( 0.38 ), 2.8 ), 4 );
+	const rustWash = smoothstep( 0.05, 0.68, rustWashNoise );
+	const rustPooling = washEdge( rustWashNoise, float( 0.42 ), float( 0.06 ) ).mul( 0.45 );
+
+	// 4. Heavy dripping pigment rivulets & dry-brush calligraphic marks
+	const dryBrushStriae = mx_noise_float( vec3( angle.mul( 38.0 ), wp.y.mul( 0.18 ), 9.4 ) );
+	const darkPigmentDrip = smoothstep( 0.28, 0.72, dryBrushStriae );
+
+	// 5. Pale gouache chalk / lime plaster wash peeling from the lower wall
+	const baseHeight = clamp( wp.y.sub( SILO.floor ).div( 5.5 ), float( 0.0 ), float( 1.0 ) );
+	const chalkNoise = fbm( vec3( angle.mul( 12.0 ), wp.y.mul( 0.75 ), 4.2 ), 3 );
+	const plasterWash = smoothstep( 0.82, 0.12, baseHeight ).mul( chalkNoise.mul( 0.5 ).add( 0.75 ) );
+	const plasterEdge = washEdge( baseHeight, float( 0.45 ), float( 0.08 ) ).mul( 0.35 );
+
+	// Palette from painting: Raw Umber (#321a12), Burnt Sienna (#6b331e), Ochre Rust (#a45124), Chalk White (#ded7cb), Slate Indigo (#24303d)
+	const slateIndigo = vec3( 0.14, 0.19, 0.24 );
+	const rawUmber = vec3( 0.20, 0.10, 0.07 );
+	const burntSienna = vec3( 0.42, 0.20, 0.12 );
+	const rustOchre = vec3( 0.64, 0.32, 0.15 );
+	const chalkGouache = vec3( 0.87, 0.84, 0.79 );
+	const darkInk = vec3( 0.05, 0.06, 0.07 );
+
+	// Layered watercolor wash blending
+	const baseWash = mix( slateIndigo, rawUmber, rustWash.mul( 0.85 ) );
+	const oxideWash = mix( baseWash, burntSienna, darkPigmentDrip.mul( 0.8 ) );
+	const highlightWash = mix( oxideWash, rustOchre, rustPooling );
+	const plasterLayer = mix( highlightWash, chalkGouache, plasterWash.mul( 0.88 ).add( plasterEdge ) );
+
+	// Stamp ink linework and paper grain modulation
+	const inkedSurface = mix( plasterLayer, darkInk, inkLine.mul( 0.75 ) );
+	const finalAlbedo = inkedSurface.mul( paperTooth.mul( 0.22 ).add( 0.88 ) );
+
+	siloWallMat.colorNode = finalAlbedo;
+	siloWallMat.roughnessNode = mix( float( 0.96 ), float( 0.82 ), darkPigmentDrip );
+	siloWallMat.metalnessNode = float( 0.02 );
+	siloWallMat.normalNode = bump(
+		corrugation.mul( 0.035 )
+			.add( inkLine.mul( - 0.035 ) )
+			.add( paperTooth.mul( 0.015 ) ),
+		float( 0.75 )
+	);
+}
+const siloWallMesh = new THREE.Mesh( new THREE.CylinderGeometry( SILO.radius * 0.92, SILO.radius, SILO.ceil - SILO.floor, 72, 1, true ), siloWallMat );
+siloWallMesh.position.y = ( SILO.ceil + SILO.floor ) / 2;
+siloWallMesh.receiveShadow = true;
+env.add( siloWallMesh );
+
+// Conical Slatted Timber Roof & Exposed Rafters
+const roofGroup = new THREE.Group();
+roofGroup.position.y = SILO.ceil;
+env.add( roofGroup );
+
+const timberRafterMat = new THREE.MeshStandardNodeMaterial( {
+	color: 0x1a1512,
+	roughness: 0.96,
+	metalness: 0.01,
+	side: THREE.DoubleSide
+} );
+
+// Conical roof cap with slatted timber planks and watercolor wash decay
+const roofCapGeo = new THREE.ConeGeometry( SILO.radius * 0.96, 4.2, 40, 1, true );
+const roofMat = new THREE.MeshStandardNodeMaterial( { side: THREE.DoubleSide } );
+{
+	const wp = positionWorld;
+	const angle = atan( wp.x.div( max( abs( wp.z ), 1e-4 ) ) );
+	const slatPattern = sin( angle.mul( 36.0 ) ).mul( 0.5 ).add( 0.5 );
+	const slatInk = smoothstep( 0.035, 0.005, abs( fract( angle.mul( 18.0 ).div( Math.PI ) ).sub( 0.5 ) ) );
+	const decayBreak = fbm( vec3( angle.mul( 6.0 ), wp.y.mul( 0.7 ), 3.9 ), 3 );
+	const isMissing = smoothstep( 0.35, 0.6, decayBreak );
+
+	// Painted charcoal & charred sepia timber tones
+	const sepiaWash = mix( vec3( 0.16, 0.12, 0.10 ), vec3( 0.28, 0.18, 0.13 ), slatPattern.mul( 0.6 ) );
+	const inkedPlanks = mix( sepiaWash, vec3( 0.04, 0.04, 0.05 ), slatInk.mul( 0.7 ) );
+	roofMat.colorNode = inkedPlanks;
+	roofMat.roughnessNode = float( 0.94 );
+	roofMat.opacityNode = float( 1.0 ).sub( isMissing );
+	roofMat.transparent = true;
+	roofMat.alphaTest = 0.5;
+}
+const roofCapMesh = new THREE.Mesh( roofCapGeo, roofMat );
+roofCapMesh.position.y = 2.1;
+roofCapMesh.castShadow = true;
+roofCapMesh.receiveShadow = true;
+roofGroup.add( roofCapMesh );
+
+// Timber rafter beams and broken cross-struts
+{
+	const RAFTERS = 16;
+	const beamGeo = new THREE.BoxGeometry( 0.22, 0.38, SILO.radius * 0.94 );
+	const rafterMesh = new THREE.InstancedMesh( beamGeo, timberRafterMat, RAFTERS );
+	const bm = new THREE.Matrix4(), bq = new THREE.Quaternion(), be = new THREE.Euler(), bv = new THREE.Vector3();
+	for ( let i = 0; i < RAFTERS; i ++ ) {
+		const a = ( i / RAFTERS ) * Math.PI * 2;
+		const pitch = - 0.34;
+		be.set( pitch, - a, 0, 'YXZ' );
+		bq.setFromEuler( be );
+		const rMid = SILO.radius * 0.46;
+		bv.set( Math.sin( a ) * rMid, 1.4, Math.cos( a ) * rMid );
+		bm.compose( bv, bq, new THREE.Vector3( 1, 1, 1 ) );
+		rafterMesh.setMatrixAt( i, bm );
+	}
+	rafterMesh.castShadow = true;
+	rafterMesh.receiveShadow = true;
+	roofGroup.add( rafterMesh );
+}
+
+// Collapsed Corrugated Metal & Broken Timber Debris (Painted gouache scraps)
+{
+	const debrisMat = new THREE.MeshStandardNodeMaterial();
+	debrisMat.colorNode = vec3( 0.28, 0.16, 0.11 );
+	debrisMat.roughnessNode = float( 0.92 );
+	debrisMat.metalnessNode = float( 0.05 );
+
+	const N_TIN = 70;
+	const tinScrapGeo = new THREE.BoxGeometry( 0.75, 0.035, 1.4 );
+	const tinScraps = new THREE.InstancedMesh( tinScrapGeo, debrisMat, N_TIN );
+	const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), sc = new THREE.Vector3();
+	for ( let i = 0; i < N_TIN; i ++ ) {
+		const a = Math.random() * Math.PI * 2;
+		const r = SILO.radius * 0.45 + Math.random() * ( SILO.radius * 0.48 );
+		const s = 0.6 + Math.random() * 1.2;
+		v.set( Math.cos( a ) * r, SILO.floor + 0.03 * s, Math.sin( a ) * r );
+		q.setFromEuler( e.set( ( Math.random() - 0.5 ) * 0.4, Math.random() * Math.PI, ( Math.random() - 0.5 ) * 0.4 ) );
+		m.compose( v, q, sc.set( s, 1, s * ( 0.8 + Math.random() * 0.6 ) ) );
+		tinScraps.setMatrixAt( i, m );
+	}
+	tinScraps.castShadow = true; tinScraps.receiveShadow = true;
+	tinScraps.renderOrder = - 1;
+	env.add( tinScraps );
+}
+
+// Painterly watercolor light shaft (soft diffused wash with motes)
+function shaft( from, dir, len, r0, r1, strength ) {
+	const m = new THREE.MeshBasicNodeMaterial( { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false } );
+	const facing = abs( dot( normalize( normalView ), vec3( 0, 0, 1 ) ) );
+	const along = uv().y;
+	const dust = fbm( positionWorld.mul( 1.1 ).add( vec3( 0, time.mul( - 0.05 ), time.mul( 0.02 ) ) ), 3 ).mul( 0.5 ).add( 0.75 );
+	// Warm sunset amber wash (#d98d5a) fading into cold misty slate
+	m.colorNode = vec3( 0.94, 0.60, 0.36 ).mul( pow( facing, 2.2 ) ).mul( mix( float( 0.10 ), float( 1.0 ), along ) ).mul( dust ).mul( strength ).mul( uShaft );
+	const geo = new THREE.CylinderGeometry( r0, r1, len, 36, 1, true );
+	const mesh = new THREE.Mesh( geo, m );
+	const d = dir.clone().normalize();
+	mesh.quaternion.setFromUnitVectors( new THREE.Vector3( 0, 1, 0 ), d.clone().negate() );
+	mesh.position.copy( from ).addScaledVector( d, len / 2 );
+	mesh.renderOrder = 2;
+	env.add( mesh );
+}
+shaft( new THREE.Vector3( 2.2, SILO.ceil + 2.5, - 1.4 ), new THREE.Vector3( - 0.25, - 1, 0.18 ), SILO.ceil - SILO.floor + 3.0, SILO.oculusRadius * 0.85, SILO.radius * 0.78, 0.07 );
+
+// Ambient particulate motes
+{
+	const DUST = isMobile ? 1200 : 3200;
+	const m = new THREE.SpriteNodeMaterial( { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending } );
+	const id = float( instanceIndex );
+	const r = vec3( hash( id.add( 11 ) ), hash( id.add( 37 ) ), hash( id.add( 73 ) ) );
+	const span = vec3( SILO.radius * 1.8, SILO.ceil - SILO.floor, SILO.radius * 1.8 );
+	const base = r.mul( span ).sub( span.mul( 0.5 ) );
+	const drift = vec3( sin( time.mul( 0.06 ).add( r.x.mul( 30 ) ) ).mul( 0.4 ), time.mul( 0.03 ).mul( r.y.add( 0.2 ) ), cos( time.mul( 0.05 ).add( r.z.mul( 25 ) ) ).mul( 0.4 ) );
+	const y = mod( base.y.add( drift.y ).add( 5.0 ), SILO.ceil - SILO.floor ).add( SILO.floor );
+	const pos = vec3( base.x.add( drift.x ), y, base.z.add( drift.z ) );
+	m.positionNode = pos;
+	m.scaleNode = hash( id.add( 5 ) ).mul( 0.009 ).add( 0.004 );
+	const warm = exp( length( pos.sub( uRedPos ) ).mul( 0.7 ).negate() ).mul( uPulse.mul( uPulseGain ).add( 1 ) );
+	m.colorNode = vec3( 0.14, 0.12, 0.11 ).add( vec3( 0.92, 0.62, 0.42 ).mul( warm ).mul( 0.85 ) ).mul( uDust );
+	m.opacityNode = smoothstep( 0.5, 0.0, length( uv().sub( 0.5 ) ) );
+	const dust = new THREE.Sprite( m );
+	dust.count = DUST; dust.frustumCulled = false;
+	env.add( dust );
+}
+
+// Silo Lighting: Warm Raking Sunset Amber (#e88d52) & Cold Slate Indigo Fill (#24303d)
+const emberLight = new THREE.PointLight( 0xe69668, P.emberLight, 0, 2 );
+emberLight.castShadow = false;
+emberLight.position.copy( uRedPos.value );
+env.add( emberLight );
+
+const oculusSkyLight = new THREE.SpotLight( 0xd98d5a, 260.0, 0, 0.65, 0.8, 2 );
+oculusSkyLight.position.set( 3.2, SILO.ceil + 4.5, - 2.0 );
+oculusSkyLight.target.position.set( - 0.5, SILO.floor + 0.5, 0.5 );
+oculusSkyLight.castShadow = true;
+oculusSkyLight.shadow.mapSize.set( 1024, 1024 );
+oculusSkyLight.shadow.bias = - 0.0015;
+env.add( oculusSkyLight, oculusSkyLight.target );
+
+const hemiLight = new THREE.HemisphereLight( 0x24303d, 0x1a1512, 0.42 );
+env.add( hemiLight );
+
+// Silo Floor: Painted Watercolor Ground with Ink Cracks & Frost Pools
+const siloFloorMat = new THREE.MeshStandardNodeMaterial();
+let reflEmissive = vec3( 0 );
+{
+	const fp = positionWorld.xz;
+
+	// Paper texture on floor
+	const floorPaper = paperGrain( fp.mul( 0.8 ) );
+
+	const woodGrain = mx_noise_float( vec3( fp.x.mul( 28.0 ), fp.y.mul( 1.1 ), 5.3 ) );
+	const dirtSoil  = fbm( vec3( fp.mul( 1.1 ), 3.4 ), 4 );
+
+	// Ink fissures and calligraphic floor cracks matching the barren tree roots
+	const fbmCrack = fbm( vec3( fp.mul( 1.6 ), 7.2 ), 4 );
+	const inkCrackA = smoothstep( 0.024, 0.0, abs( mx_noise_float( vec3( fp.mul( 3.4 ).add( fbmCrack.mul( 0.6 ) ), 9.1 ) ) ) );
+	const inkCrackB = smoothstep( 0.016, 0.0, abs( mx_noise_float( vec3( fp.mul( 6.8 ), 3.4 ) ) ) );
+	const totalInkCracks = inkCrackA.add( inkCrackB.mul( 0.7 ) ).clamp( 0.0, 1.0 );
+
+	// Timber plank joints
+	const plankWidth = 0.55;
+	const plankJoint = smoothstep( 0.02, 0.0, abs( fract( fp.x.div( plankWidth ) ).sub( 0.5 ) ) );
+
+	// Wet-in-wet wash pools and frost glazing
+	const puddleNoise = fbm( vec3( fp.mul( 0.34 ), 8.7 ), 4 );
+	const wet = smoothstep( 0.16, 0.28, puddleNoise ).toVar();
+	const frostMask = smoothstep( 0.26, 0.44, fbm( vec3( fp.mul( 1.8 ), 1.9 ), 3 ) );
+
+	// Palette: Sepia soil (#1e1713), Paynes grey slush, and pale frost wash (#a2b0ba)
+	const sepiaSoil = vec3( 0.16, 0.12, 0.10 );
+	const rottedPlank = vec3( 0.21, 0.16, 0.13 ).mul( woodGrain.mul( 0.15 ).add( 0.85 ) );
+	const frostTone = vec3( 0.52, 0.58, 0.62 );
+	const inkTone = vec3( 0.04, 0.05, 0.06 );
+
+	const floorBase = mix( rottedPlank, sepiaSoil, dirtSoil.mul( 0.7 ) );
+	const frostedFloor = mix( floorBase, frostTone, frostMask.mul( 0.42 ) );
+	const inkedFloor = mix( frostedFloor, inkTone, totalInkCracks.mul( 0.85 ).add( plankJoint.mul( 0.5 ) ) );
+	const finalFloorAlbedo = inkedFloor.mul( floorPaper.mul( 0.2 ).add( 0.9 ) );
+
+	siloFloorMat.colorNode = finalFloorAlbedo.mul( mix( float( 1.0 ), float( 0.32 ), wet ) );
+	siloFloorMat.roughnessNode = mix( float( 0.94 ), float( 0.04 ), wet );
+	siloFloorMat.metalnessNode = mix( float( 0.01 ), float( 0.05 ), wet );
+
+	const relief = woodGrain.mul( 0.025 )
+		.add( dirtSoil.mul( 0.04 ) )
+		.sub( totalInkCracks.mul( 0.04 ) )
+		.sub( plankJoint.mul( 0.03 ) );
+
+	siloFloorMat.normalNode = bump( relief, mix( float( 0.032 ), float( 0.005 ), wet ) );
+
+	if ( ! isMobile ) {
+		const refl = reflector( { resolutionScale: 0.25 } );
+		refl.uvNode = refl.uvNode.add( vec2( mx_noise_float( vec3( fp.mul( 3.5 ), time.mul( 0.2 ) ) ), mx_noise_float( vec3( fp.mul( 3.5 ).add( 11 ), time.mul( 0.2 ) ) ) ).mul( 0.003 ) );
+		refl.target.rotateX( - Math.PI / 2 );
+		refl.target.position.y = SILO.floor;
+		{
+			const rb = refl.reflector || refl;
+			if ( rb && typeof rb.updateBefore === 'function' ) {
+				const orig = rb.updateBefore.bind( rb );
+				rb.updateBefore = ( f ) => ( reflGate() ? orig( f ) : undefined );
+			}
+		}
+		env.add( refl.target );
+		reflEmissive = refl.rgb.mul( wet ).mul( vec3( 0.48, 0.44, 0.42 ) );
+		siloFloorMat.emissiveNode = reflEmissive;
+	}
+}
+const siloFloorMesh = new THREE.Mesh( new THREE.CircleGeometry( SILO.radius + 1.5, 48 ), siloFloorMat );
+siloFloorMesh.rotation.x = - Math.PI / 2;
+siloFloorMesh.position.y = SILO.floor;
+siloFloorMesh.receiveShadow = true;
+siloFloorMesh.renderOrder = - 2;
+env.add( siloFloorMesh );
+
+// ═══════════════════════════════════════════════════════════════════
+//  post processing (With Watercolor Paper Pass & Pigment Wash Bleed)
+// ═══════════════════════════════════════════════════════════════════
+
+const pipeline = new THREE.RenderPipeline( renderer );
+const scenePass = pass( scene, camera );
+const sceneColor = scenePass.getTextureNode( 'output' );
+
+const haze = VOL ? Fn( () => {
+	const ndc = vec2( screenUV.x.mul( 2 ).sub( 1 ), screenUV.y.mul( 2 ).sub( 1 ).negate() );
+	const far = uInvVP.mul( vec4( ndc, 1, 1 ) );
+	const dir = normalize( far.xyz.div( far.w ).sub( uCamPos ) ).toVar();
+	const R = 1.6;
+	const b = dot( uCamPos, dir ), c = dot( uCamPos, uCamPos ).sub( R * R );
+	const h = b.mul( b ).sub( c );
+	const col = vec3( 0 ).toVar();
+	If( h.greaterThan( 0 ), () => {
+		const sq = sqrt( h );
+		const t0 = max( b.negate().sub( sq ), 0 ), t1 = b.negate().add( sq );
+		const ds = t1.sub( t0 ).div( HAZE_STEPS ).toVar();
+		const jit = fract( fract( dot( screenCoordinate.xy, vec2( 0.06711056, 0.00583715 ) ) ).mul( 52.9829189 ) );
+		const T = float( 1 ).toVar();
+		Loop( HAZE_STEPS, ( { i } ) => {
+			const p = uCamPos.add( dir.mul( t0.add( ds.mul( float( i ).add( jit ) ) ) ) );
+			const g = toGrid( p );
+			const rho = texture3D( densTex, g ).level( 0 ).r;
+			const tr = texture3D( lightTex, g ).level( 0 ).g;
+			const glow = exp( length( p.sub( uRedPos ) ).mul( uFall ).negate() );
+			const twilightSkyFlare = mix( vec3( 0.32, 0.44, 0.58 ), vec3( 0.92, 0.62, 0.42 ), uPulse );
+			col.addAssign( twilightSkyFlare.mul( T.mul( rho ).mul( ds ).mul( tr ).mul( glow ) ) );
+			T.mulAssign( exp( rho.mul( ds ).mul( uExt ).mul( uHazeDens ).negate() ) );
+		} );
+	} );
+	return col.mul( uHazeGain ).mul( uPulse.mul( uPulseGain ).mul( 0.7 ).add( 1.0 ) );
+} )() : null;
+
+// Screen-space watercolor granulation and cold-press tooth overlay
+const watercolorPass = Fn( () => {
+	const base = sceneColor.toVar();
+	const scrCoord = screenCoordinate.xy;
+	// Subtle paper grain tooth
+	const pNoise = mx_noise_float( scrCoord.mul( 0.35 ) ).mul( 0.5 ).add( 0.5 );
+	const grainMod = pNoise.mul( 0.12 ).add( 0.94 );
+	return base.mul( grainMod );
+} )();
+
+const combinedScene = haze && P.haze && P.shadows ? watercolorPass.add( haze ) : watercolorPass;
+const bloomPass = bloom( combinedScene, P.bloomStrength, P.bloomRadius, P.bloomThreshold );
+
+const setOutput = () => {
+	pipeline.outputNode = combinedScene.add( bloomPass );
+	pipeline.needsUpdate = true;
+};
+setOutput();
+
+// Warm up WebGPU compute and render pipelines in background
+try {
+	if ( typeof renderer.compileAsync === 'function' ) {
+		renderer.compileAsync( scene, camera ).catch( () => {} );
+	}
+} catch ( _e ) {}
+
+// ═══════════════════════════════════════════════════════════════════
+//  pointer
+// ═══════════════════════════════════════════════════════════════════
+
+const ray = new THREE.Raycaster();
+const ndc = new THREE.Vector2( 9, 9 );
+const ptr = { inside: false, down: false, lastMove: - 1e9, strength: 0, prevHit: new THREE.Vector3(), hit: new THREE.Vector3(), first: true };
+const plane = new THREE.Plane();
+const _camDir = new THREE.Vector3(), _origin = new THREE.Vector3();
+const _colA = new THREE.Color( 0x3d546e ), _colB = new THREE.Color( 0xeda274 );
+
+const setNDC = ( e ) => { ndc.set( ( e.clientX / innerWidth ) * 2 - 1, - ( e.clientY / innerHeight ) * 2 + 1 ); ptr.lastMove = performance.now(); ptr.inside = true; };
+
+renderer.domElement.addEventListener( 'pointermove', setNDC );
+renderer.domElement.addEventListener( 'pointerdown', ( e ) => { if ( e.button === 0 ) { setNDC( e ); ptr.down = true; } } );
+addEventListener( 'pointerup', () => { ptr.down = false; } );
+addEventListener( 'pointercancel', () => { ptr.down = false; ptr.inside = false; } );
+renderer.domElement.addEventListener( 'pointerleave', () => { ptr.inside = false; } );
+renderer.domElement.addEventListener( 'contextmenu', ( e ) => e.preventDefault() );
+
+// ═══════════════════════════════════════════════════════════════════
+//  ember pulse
+// ═══════════════════════════════════════════════════════════════════
+
+const redBase = uRedPos.value.clone();
+const pulse = { next: 2.4, t0: - 99, dur: 1.2, amp: 1, from: redBase.clone(), to: redBase.clone(), force: false };
+
+function pulseEnvelope( t ) {
+
+	if ( ( P.pulse && t > pulse.next ) || pulse.force ) {
+		pulse.force = false;
+		pulse.t0 = t;
+		pulse.next = t + P.pulseMin + Math.random() * Math.max( 0, P.pulseMax - P.pulseMin );
+		pulse.dur = 0.8 + Math.random() * 0.9;
+		pulse.amp = 0.65 + Math.random() * 0.35;
+		pulse.from.copy( uRedPos.value );
+		const w = P.pulseWander;
+		pulse.to.set( redBase.x + ( Math.random() * 2 - 1 ) * w, redBase.y + ( Math.random() * 2 - 1 ) * w * 0.8, redBase.z + ( Math.random() * 2 - 1 ) * w );
+	}
+	const x = t - pulse.t0, attack = 0.16;
+	uRedPos.value.lerpVectors( pulse.from, pulse.to, Math.min( Math.max( x / ( attack * 2.5 ), 0 ), 1 ) );
+	if ( x < 0 ) return 0;
+	const env = x < attack ? Math.sin( ( x / attack ) * Math.PI * 0.5 ) : Math.exp( - ( x - attack ) / ( pulse.dur * 0.4 ) );
+	return env * pulse.amp;
+
+}
+addEventListener( 'keydown', ( e ) => { if ( e.code === 'Space' ) pulse.force = true; } );
+
+function ghost( t, tIdle ) {
+
+	if ( t < 3.2 ) {
+		const a = Math.min( t / 0.4, 1 );
+		ndc.set( - 0.12 + Math.sin( t * 0.9 ) * 0.03, 0.06 + Math.cos( t * 0.7 ) * 0.03 );
+		return { s: a * 0.9, down: true };
+	}
+	if ( ! P.autoStir || tIdle < 4 ) return null;
+	const u = t * 0.23;
+	ndc.set( Math.sin( u * 1.7 ) * 0.32, Math.sin( u * 1.1 + 1.3 ) * 0.28 );
+	return { s: 0.35 + 0.2 * Math.sin( u * 2.3 ), down: false };
+
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  controls binding
+// ═══════════════════════════════════════════════════════════════════
+
+const paneContainer = document.getElementById( 'pane-container' );
+const toggleBtn = document.getElementById( 'controls-toggle-btn' );
+
+let isOpen = false;
+toggleBtn.addEventListener( 'click', () => {
+	isOpen = ! isOpen;
+	paneContainer.classList.toggle( 'pane-hidden', ! isOpen );
+	toggleBtn.style.background = isOpen ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)';
+	toggleBtn.style.borderColor = isOpen ? 'rgba(0, 212, 255, 0.55)' : 'rgba(255, 255, 255, 0.22)';
+} );
+
+function bindSlider( id, propKey, uniformRef ) {
+	const input = document.getElementById( `ctrl-${id}` );
+	const badge = document.getElementById( `val-${id}` );
+	if ( ! input || ! badge ) return;
+
+	input.addEventListener( 'input', ( e ) => {
+		const val = parseFloat( e.target.value );
+		P[ propKey ] = val;
+		if ( uniformRef ) uniformRef.value = val;
+		badge.textContent = val.toFixed( 2 );
+	} );
+}
+
+bindSlider( 'turbulence', 'turbulence', uTurb );
+bindSlider( 'flowFreq', 'flowFreq', uFreq );
+bindSlider( 'flowSpeed', 'flowSpeed', uFlowSpeed );
+bindSlider( 'lump', 'lump', uLump );
+bindSlider( 'spring', 'spring', uSpring );
+bindSlider( 'damping', 'damping', uDamp );
+
+bindSlider( 'pulseMin', 'pulseMin' );
+bindSlider( 'pulseMax', 'pulseMax' );
+bindSlider( 'pulseGain', 'pulseGain', uPulseGain );
+bindSlider( 'pulseTint', 'pulseTint', uPulseTint );
+bindSlider( 'pulsePierce', 'pulsePierce', uPulsePierce );
+bindSlider( 'pulseBloom', 'pulseBloom' );
+bindSlider( 'pulseWander', 'pulseWander' );
+
+const expSlider = document.getElementById( 'ctrl-exposure' );
+if ( expSlider ) {
+	expSlider.addEventListener( 'input', ( e ) => {
+		const val = parseFloat( e.target.value );
+		P.exposure = val;
+		renderer.toneMappingExposure = val;
+		document.getElementById( 'val-exposure' ).textContent = val.toFixed( 2 );
+	} );
+}
+
+const fogSlider = document.getElementById( 'ctrl-fog' );
+if ( fogSlider ) {
+	fogSlider.addEventListener( 'input', ( e ) => {
+		const val = parseFloat( e.target.value );
+		P.fog = val;
+		scene.fog.density = val;
+		document.getElementById( 'val-fog' ).textContent = val.toFixed( 3 );
+	} );
+}
+
+const oculusSlider = document.getElementById( 'ctrl-moonLight' );
+if ( oculusSlider ) {
+	oculusSlider.addEventListener( 'input', ( e ) => {
+		const val = parseFloat( e.target.value );
+		P.moonLight = val;
+		oculusSkyLight.intensity = val;
+		document.getElementById( 'val-moonLight' ).textContent = val.toFixed( 1 );
+	} );
+}
+
+const ambSlider = document.getElementById( 'ctrl-ambient' );
+if ( ambSlider ) {
+	ambSlider.addEventListener( 'input', ( e ) => {
+		const val = parseFloat( e.target.value );
+		P.ambient = val;
+		uAmb.value = val;
+		hemiLight.intensity = val * 2.3;
+		document.getElementById( 'val-ambient' ).textContent = val.toFixed( 2 );
+	} );
+}
+
+bindSlider( 'shafts', 'shafts', uShaft );
+
+const pulseCheckbox = document.getElementById( 'ctrl-pulse' );
+if ( pulseCheckbox ) {
+	pulseCheckbox.addEventListener( 'change', ( e ) => {
+		P.pulse = e.target.checked;
+	} );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  resize guard & frame-time governor
+// ═══════════════════════════════════════════════════════════════════
+
+const MIN_PX = 8;
+const viewOK = () => innerWidth >= MIN_PX && innerHeight >= MIN_PX;
+let sizeDirty = true;
+addEventListener( 'resize', () => { sizeDirty = true; } );
+
+function applySize() {
+	if ( ! viewOK() ) return false;
+	camera.aspect = innerWidth / innerHeight;
+	camera.updateProjectionMatrix();
+
+	renderer.setPixelRatio( Math.min( devicePixelRatio, 1.5 ) * GOV_RES[ gov.level ] );
+	renderer.setSize( innerWidth, innerHeight );
+	sizeDirty = false;
+	return true;
+}
+
+const GOV_RES = [ 1, 1, 1, 0.85, 0.7 ];
+const gov = {
+	enabled: new URLSearchParams( location.search ).get( 'gov' ) !== '0',
+	level: 0, ema: 1000 / 60, warm: 120, lastChange: 0, lastUp: - 1e9, upWait: 8, fails: 0,
+};
+let lastFrameT = performance.now();
+
+function reflGate() { return gov.level < 1 || frameCount % 2 === 0; }
+
+function setGovLevel( l ) {
+	gov.level = l;
+	gov.lastChange = performance.now();
+	gov.ema = 1000 / 60;
+	gov.warm = 20;
+	sizeDirty = true;
+}
+
+function govUpdate( rawMs, now ) {
+	if ( ! gov.enabled ) return;
+	if ( rawMs > 100 || document.hidden ) { gov.warm = Math.max( gov.warm, 20 ); return; }
+	if ( gov.warm > 0 ) { gov.warm --; return; }
+	gov.ema += ( rawMs - gov.ema ) * 0.08;
+	const since = ( now - gov.lastChange ) / 1000;
+	if ( gov.ema > 18.5 && since > 1.5 && gov.level < GOV_RES.length - 1 ) {
+		if ( now - gov.lastUp < 8000 ) { gov.fails ++; gov.upWait = gov.fails >= 3 ? Infinity : Math.min( gov.upWait * 2, 120 ); }
+		setGovLevel( gov.level + 1 );
+	} else if ( gov.level > 0 && gov.ema < 17.4 ) {
+		const wait = gov.fails >= 3 ? Infinity : gov.ema < 13 ? Math.min( 3 * Math.pow( 2, gov.fails ), gov.upWait ) : gov.upWait;
+		if ( since > wait ) { gov.lastUp = now; setGovLevel( gov.level - 1 ); }
+	}
+}
+
+const timer = new THREE.Timer();
+timer.connect( document );
+let t = 0;
+
+let firstFrame = true, fpsMs = 16;
+let frameCount = 0;
+
+// ═══════════════════════════════════════════════════════════════════
+//  Web Audio Analyzer Node & Audio State Initialization
+// ═══════════════════════════════════════════════════════════════════
+const siloAudio = document.getElementById( 'silo-audio' );
+const audioPlayerHud = document.getElementById( 'audio-player-hud' );
+const eqBars = [
+	document.getElementById( 'eq-b1' ),
+	document.getElementById( 'eq-b2' ),
+	document.getElementById( 'eq-b3' ),
+	document.getElementById( 'eq-b4' )
+];
+
+let audioCtx = null;
+let analyserNode = null;
+let audioSrcNode = null;
+let audioFreqData = null;
+let audioInitialized = false;
+
+const audioState = {
+	bass: 0,
+	mid: 0,
+	high: 0,
+	energy: 0,
+	prevEnergy: 0,
+	beat: 0
+};
+
+function initWebAudio() {
+	if ( audioInitialized || ! siloAudio ) return;
+	try {
+		const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+		if ( ! AudioContextClass ) return;
+		audioCtx = new AudioContextClass();
+
+		analyserNode = audioCtx.createAnalyser();
+		analyserNode.fftSize = 256;
+		analyserNode.smoothingTimeConstant = 0.78;
+		audioFreqData = new Uint8Array( analyserNode.frequencyBinCount );
+
+		audioSrcNode = audioCtx.createMediaElementSource( siloAudio );
+		audioSrcNode.connect( analyserNode );
+		analyserNode.connect( audioCtx.destination );
+
+		audioInitialized = true;
+	} catch ( err ) {
+		console.warn( 'Web Audio API initialization deferred or CORS restricted; using synthetic fallback:', err );
+	}
+}
+
+function sampleAudioData() {
+	if ( ! audioInitialized || ! analyserNode || ! siloAudio || siloAudio.paused ) {
+		audioState.bass *= 0.9;
+		audioState.mid *= 0.9;
+		audioState.high *= 0.9;
+		audioState.energy *= 0.9;
+		audioState.beat *= 0.85;
+
+		if ( eqBars[ 0 ] ) {
+			for ( let i = 0; i < 4; i ++ ) {
+				eqBars[ i ].style.height = '3.5px';
+			}
+		}
+		return audioState;
+	}
+
+	analyserNode.getByteFrequencyData( audioFreqData );
+
+	let sumBass = 0;
+	for ( let i = 0; i <= 2; i ++ ) sumBass += audioFreqData[ i ];
+	const rawBass = sumBass / ( 3 * 255 );
+
+	let sumLowMid = 0;
+	for ( let i = 3; i <= 8; i ++ ) sumLowMid += audioFreqData[ i ];
+	const rawLowMid = sumLowMid / ( 6 * 255 );
+
+	let sumHighMid = 0;
+	for ( let i = 9; i <= 22; i ++ ) sumHighMid += audioFreqData[ i ];
+	const rawHighMid = sumHighMid / ( 14 * 255 );
+
+	let sumHigh = 0;
+	for ( let i = 23; i <= 56; i ++ ) sumHigh += audioFreqData[ i ];
+	const rawHigh = sumHigh / ( 34 * 255 );
+
+	audioState.bass += ( rawBass - audioState.bass ) * 0.35;
+	audioState.mid += ( ( rawLowMid + rawHighMid ) * 0.5 - audioState.mid ) * 0.3;
+	audioState.high += ( rawHigh - audioState.high ) * 0.3;
+
+	const curEnergy = audioState.bass * 0.6 + audioState.mid * 0.3 + audioState.high * 0.1;
+	const diff = Math.max( 0, curEnergy - audioState.prevEnergy );
+	audioState.beat = Math.max( audioState.beat * 0.82, diff * 3.8 );
+	audioState.prevEnergy = curEnergy;
+	audioState.energy = curEnergy;
+
+	if ( eqBars[ 0 ] ) {
+		const h1 = Math.max( 3.5, Math.min( 18, 3.5 + rawBass * 16 ) );
+		const h2 = Math.max( 3.5, Math.min( 18, 3.5 + rawLowMid * 15 ) );
+		const h3 = Math.max( 3.5, Math.min( 18, 3.5 + rawHighMid * 13 ) );
+		const h4 = Math.max( 3.5, Math.min( 18, 3.5 + rawHigh * 12 ) );
+		eqBars[ 0 ].style.height = `${h1.toFixed( 1 )}px`;
+		eqBars[ 1 ].style.height = `${h2.toFixed( 1 )}px`;
+		eqBars[ 2 ].style.height = `${h3.toFixed( 1 )}px`;
+		eqBars[ 3 ].style.height = `${h4.toFixed( 1 )}px`;
+	}
+
+	return audioState;
+}
+
+if ( siloAudio ) {
+	siloAudio.volume = 0.38;
+}
+
+function updateAudioUI( isPlaying ) {
+	if ( ! audioPlayerHud ) return;
+	if ( isPlaying ) {
+		audioPlayerHud.classList.add( 'audio-playing' );
+		audioPlayerHud.classList.remove( 'audio-paused' );
+	} else {
+		audioPlayerHud.classList.remove( 'audio-playing' );
+		audioPlayerHud.classList.add( 'audio-paused' );
+	}
+}
+
+if ( audioPlayerHud && siloAudio ) {
+	audioPlayerHud.addEventListener( 'click', () => {
+		if ( audioCtx && audioCtx.state === 'suspended' ) {
+			audioCtx.resume();
+		}
+		if ( siloAudio.paused ) {
+			initWebAudio();
+			siloAudio.play().then( () => updateAudioUI( true ) ).catch( () => updateAudioUI( false ) );
+		} else {
+			siloAudio.pause();
+			updateAudioUI( false );
+		}
+	} );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  main render animation loop with Scissor PiP View
+// ═══════════════════════════════════════════════════════════════════
+
+renderer.setAnimationLoop( () => {
+
+	timer.update();
+	if ( ! viewOK() ) return;
+	if ( sizeDirty && ! applySize() ) return;
+	const frameNow = performance.now();
+	govUpdate( frameNow - lastFrameT, frameNow );
+	lastFrameT = frameNow;
+	const dt = Math.min( timer.getDelta(), 1 / 30 );
+	if ( firstFrame ) { firstFrame = false; document.getElementById( 'loader' ).classList.add( 'hidden' ); }
+	fpsMs = fpsMs * 0.95 + dt * 1000 * 0.05;
+	t += dt;
+	frameCount ++;
+
+	if ( frameCount === 4 ) { renderer.shadowMap.needsUpdate = true; renderer.shadowMap.autoUpdate = false; }
+	controls.update( dt );
+
+	const now = performance.now();
+	const tIdle = ( now - ptr.lastMove ) / 1000;
+	let target = 0;
+	if ( ptr.down ) target = 1;
+	else if ( ptr.inside && tIdle < 1.5 ) target = P.hover;
+	else {
+		const g = ghost( t, tIdle );
+		if ( g ) target = g.s;
+	}
+	ptr.strength += ( target - ptr.strength ) * ( 1 - Math.exp( - dt * 8 ) );
+
+	ray.setFromCamera( ndc, camera );
+	uRayO.value.copy( ray.ray.origin );
+	uRayD.value.copy( ray.ray.direction );
+
+	plane.setFromNormalAndCoplanarPoint( camera.getWorldDirection( _camDir ).negate(), _origin );
+	if ( ray.ray.intersectPlane( plane, ptr.hit ) ) {
+		if ( ptr.first ) { ptr.prevHit.copy( ptr.hit ); ptr.first = false; }
+		uPtrVel.value.subVectors( ptr.hit, ptr.prevHit ).clampLength( 0, 0.25 );
+		ptr.prevHit.copy( ptr.hit );
+	}
+
+	const basePulseVal = pulseEnvelope( t );
+
+	// Web Audio sample update & reactive modulation
+	const audioData = sampleAudioData();
+	const audioBeat = audioData.beat;
+	const audioBass = audioData.bass;
+	const audioMid = audioData.mid;
+	const audioHigh = audioData.high;
+
+	// Composite pulse: envelope baseline + direct audio mid/transient reactivity
+	const pulseVal = Math.min( basePulseVal + audioMid * 0.95 + audioBeat * 0.65, 1.8 );
+
+	// Audio modulation into particle turbulence & flow speed
+	uTurb.value = P.turbulence + audioBass * 1.85 + audioBeat * 0.8;
+	uFlowSpeed.value = P.flowSpeed + audioHigh * 0.14;
+	uLump.value = P.lump + audioBass * 0.22;
+
+	uPtr.value = ptr.strength;
+	uTime.value = t;
+	uPulse.value = pulseVal;
+
+	// Cherenkov flare reactive pulse glow & audio beat lighting bounce
+	emberLight.position.copy( uRedPos.value );
+	emberLight.color.copy( _colA ).lerp( _colB, Math.min( pulseVal, 1.0 ) );
+	emberLight.intensity = P.emberLight * ( 1 + pulseVal * P.pulseGain * 0.5 + audioBass * 1.5 + audioBeat * 2.0 );
+
+	if ( bloomPass ) bloomPass.strength.value = P.bloomStrength * ( 1 + pulseVal * P.pulseBloom + audioMid * 0.75 );
+	uDt.value = dt;
+
+	uCamPos.value.copy( camera.position );
+	uInvVP.value.multiplyMatrices( camera.matrixWorld, camera.projectionMatrixInverse );
+
+	renderer.compute( update );
+
+	if ( VOL && P.shadows ) {
+		const every = gov.level >= 2 ? 3 : 2;
+		const slot = frameCount % every;
+		if ( frameCount <= 2 ) { renderer.compute( densityPasses ); renderer.compute( lightPasses ); }
+		else if ( slot === 0 ) renderer.compute( densityPasses );
+		else if ( slot === 1 ) renderer.compute( lightPasses );
+	}
+
+	// Render primary perspective view across the entire screen
+	renderer.setScissorTest( false );
+	renderer.setViewport( 0, 0, innerWidth, innerHeight );
+	pipeline.render();
+
+} );
+
+// ═══════════════════════════════════════════════════════════════════
+//  Intro Sequence Transition Handler
+// ═══════════════════════════════════════════════════════════════════
+
+const introLayer = document.getElementById( 'intro-layer' );
+const introBg = document.getElementById( 'intro-bg' );
+const introContent = document.getElementById( 'intro-content' );
+const introVideo = document.getElementById( 'intro-video' );
+const enterBtn = document.getElementById( 'enter-silo-btn' );
+const dustCanvas = document.getElementById( 'intro-dust-canvas' );
+const titleBlock = document.getElementById( 'title-block' );
+
+let transitionStarted = false;
+let transitionCompleted = false;
+let checkRafId = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  Intro Ambient Dust / Charcoal Ash Motes & Mouse Parallax
+// ═══════════════════════════════════════════════════════════════════
+let dustCtx = null;
+let dustParticles = [];
+let introDustRaf = null;
+
+if ( dustCanvas ) {
+	dustCtx = dustCanvas.getContext( '2d' );
+	const resizeDust = () => {
+		dustCanvas.width = innerWidth;
+		dustCanvas.height = innerHeight;
+	};
+	resizeDust();
+	window.addEventListener( 'resize', resizeDust );
+
+	const DUST_COUNT = 45;
+	for ( let i = 0; i < DUST_COUNT; i ++ ) {
+		dustParticles.push( {
+			x: Math.random() * innerWidth,
+			y: Math.random() * innerHeight,
+			size: 0.8 + Math.random() * 2.2,
+			alpha: 0.15 + Math.random() * 0.45,
+			speedX: ( Math.random() - 0.4 ) * 0.35,
+			speedY: - ( 0.2 + Math.random() * 0.45 ),
+			glow: Math.random() < 0.25 // occasional faint amber spark
+		} );
+	}
+
+	function renderIntroDust() {
+		if ( ! dustCtx || transitionStarted ) return;
+		dustCtx.clearRect( 0, 0, dustCanvas.width, dustCanvas.height );
+
+		for ( let i = 0; i < dustParticles.length; i ++ ) {
+			const p = dustParticles[ i ];
+			p.x += p.speedX;
+			p.y += p.speedY;
+
+			if ( p.y < - 10 ) { p.y = dustCanvas.height + 10; p.x = Math.random() * dustCanvas.width; }
+			if ( p.x < - 10 ) p.x = dustCanvas.width + 10;
+			if ( p.x > dustCanvas.width + 10 ) p.x = - 10;
+
+			dustCtx.beginPath();
+			dustCtx.arc( p.x, p.y, p.size, 0, Math.PI * 2 );
+			if ( p.glow ) {
+				dustCtx.fillStyle = `rgba(235, 150, 95, ${p.alpha * 0.75})`;
+				dustCtx.shadowBlur = 6;
+				dustCtx.shadowColor = 'rgba(235, 140, 80, 0.45)';
+			} else {
+				dustCtx.fillStyle = `rgba(210, 225, 235, ${p.alpha})`;
+				dustCtx.shadowBlur = 0;
+			}
+			dustCtx.fill();
+		}
+
+		introDustRaf = requestAnimationFrame( renderIntroDust );
+	}
+	renderIntroDust();
+}
+
+// Subtle Mouse Parallax on Background & Title
+let targetMouseX = 0, targetMouseY = 0;
+let curMouseX = 0, curMouseY = 0;
+let parallaxRaf = null;
+
+window.addEventListener( 'mousemove', ( e ) => {
+	if ( transitionStarted ) return;
+	const normX = ( e.clientX / innerWidth - 0.5 ) * 2;
+	const normY = ( e.clientY / innerHeight - 0.5 ) * 2;
+	targetMouseX = normX;
+	targetMouseY = normY;
+} );
+
+function updateParallax() {
+	if ( transitionStarted ) return;
+	curMouseX += ( targetMouseX - curMouseX ) * 0.05;
+	curMouseY += ( targetMouseY - curMouseY ) * 0.05;
+
+	if ( introBg ) {
+		introBg.style.transform = `scale(1.04) translate3d(${- curMouseX * 14}px, ${- curMouseY * 10}px, 0)`;
+	}
+	if ( introContent ) {
+		introContent.style.transform = `translate3d(${curMouseX * 8}px, ${curMouseY * 6}px, 0)`;
+	}
+
+	parallaxRaf = requestAnimationFrame( updateParallax );
+}
+updateParallax();
+
+function startDissolve( durationMs = 1200 ) {
+	if ( transitionStarted ) return;
+	transitionStarted = true;
+
+	if ( introDustRaf ) cancelAnimationFrame( introDustRaf );
+	if ( parallaxRaf ) cancelAnimationFrame( parallaxRaf );
+
+	document.body.classList.add( 'hud-active' );
+
+	const start = performance.now();
+	function fadeStep( now ) {
+		const elapsed = now - start;
+		const progress = Math.min( elapsed / durationMs, 1 );
+
+		// Smooth ease-in-out curve
+		const ease = progress < 0.5
+			? 2 * progress * progress
+			: 1 - Math.pow( - 2 * progress + 2, 2 ) / 2;
+
+		if ( introLayer ) {
+			introLayer.style.opacity = String( 1 - ease );
+		}
+
+		if ( progress < 1 ) {
+			requestAnimationFrame( fadeStep );
+		} else {
+			transitionCompleted = true;
+			if ( introLayer ) {
+				introLayer.style.pointerEvents = 'none';
+			}
+			try {
+				introVideo.pause();
+				introVideo.currentTime = 0;
+			} catch ( _e ) {}
+		}
+	}
+
+	requestAnimationFrame( fadeStep );
+}
+
+function returnOutside( durationMs = 1000 ) {
+	if ( ! transitionCompleted && ! transitionStarted ) return;
+
+	// Pause audio and reset HUD indicators
+	if ( siloAudio && ! siloAudio.paused ) {
+		siloAudio.pause();
+		updateAudioUI( false );
+	}
+
+	// Hide in-silo HUD
+	document.body.classList.remove( 'hud-active' );
+
+	if ( checkRafId ) cancelAnimationFrame( checkRafId );
+
+	// Reset video & background layers
+	try {
+		introVideo.pause();
+		introVideo.currentTime = 0;
+	} catch ( _e ) {}
+	introVideo.style.opacity = '0';
+
+	if ( introBg ) introBg.style.opacity = '1';
+	if ( dustCanvas ) dustCanvas.style.opacity = '0.65';
+
+	if ( introLayer ) {
+		introLayer.style.pointerEvents = 'auto';
+	}
+
+	// Smoothly dissolve intro screen back in
+	const start = performance.now();
+	function fadeInStep( now ) {
+		const elapsed = now - start;
+		const progress = Math.min( elapsed / durationMs, 1 );
+		const ease = progress < 0.5
+			? 2 * progress * progress
+			: 1 - Math.pow( - 2 * progress + 2, 2 ) / 2;
+
+		if ( introLayer ) {
+			introLayer.style.opacity = String( ease );
+		}
+
+		if ( progress < 1 ) {
+			requestAnimationFrame( fadeInStep );
+		} else {
+			// Restore interactive content button & title
+			if ( introContent ) {
+				introContent.style.opacity = '1';
+				introContent.style.transform = 'scale(1)';
+				introContent.style.pointerEvents = 'auto';
+			}
+			transitionStarted = false;
+			transitionCompleted = false;
+
+			// Restart dust and parallax loops
+			if ( typeof renderIntroDust === 'function' ) renderIntroDust();
+			if ( typeof updateParallax === 'function' ) updateParallax();
+		}
+	}
+	requestAnimationFrame( fadeInStep );
+}
+
+if ( titleBlock ) {
+	titleBlock.addEventListener( 'click', () => returnOutside( 1000 ) );
+	titleBlock.addEventListener( 'keydown', ( e ) => {
+		if ( e.key === 'Enter' || e.key === ' ' ) {
+			e.preventDefault();
+			returnOutside( 1000 );
+		}
+	} );
+}
+
+if ( enterBtn && introVideo ) {
+	enterBtn.addEventListener( 'click', () => {
+		// Initialize & resume Web Audio context on user gesture
+		initWebAudio();
+		if ( audioCtx && audioCtx.state === 'suspended' ) {
+			audioCtx.resume();
+		}
+
+		// 1) Start background audio track immediately on user interaction
+		if ( siloAudio ) {
+			siloAudio.volume = 0.38;
+			siloAudio.play().then( () => {
+				updateAudioUI( true );
+			} ).catch( ( err ) => {
+				console.warn( 'Audio play deferred or blocked:', err );
+			} );
+		}
+
+		// 2) Fade out text, button, hints, and corner telemetry
+		introContent.style.opacity = '0';
+		introContent.style.transform = 'scale(0.95)';
+		introContent.style.pointerEvents = 'none';
+
+		// 3) Reveal and play transition video
+		introVideo.style.opacity = '1';
+		introBg.style.opacity = '0';
+		if ( dustCanvas ) dustCanvas.style.opacity = '0';
+
+		introVideo.currentTime = 0;
+		const playPromise = introVideo.play();
+		if ( playPromise !== undefined ) {
+			playPromise.catch( () => {
+				introVideo.muted = true;
+				introVideo.play().catch( () => startDissolve( 300 ) );
+			} );
+		}
+
+		// 4) Continuous time checks to start cross-dissolve while the video is rolling at full speed
+		const FADE_WINDOW = 1.4; // seconds before end of video
+
+		const monitorPlayback = () => {
+			if ( transitionStarted ) return;
+
+			const d = introVideo.duration;
+			const c = introVideo.currentTime;
+
+			if ( Number.isFinite( d ) && d > 0 ) {
+				if ( c >= Math.max( 0.2, d - FADE_WINDOW ) ) {
+					startDissolve( 1200 );
+					return;
+				}
+			}
+
+			checkRafId = requestAnimationFrame( monitorPlayback );
+		};
+		checkRafId = requestAnimationFrame( monitorPlayback );
+
+		introVideo.addEventListener( 'timeupdate', () => {
+			if ( transitionStarted ) return;
+			const d = introVideo.duration;
+			const c = introVideo.currentTime;
+			if ( Number.isFinite( d ) && d > 0 && c >= Math.max( 0.2, d - FADE_WINDOW ) ) {
+				if ( checkRafId ) cancelAnimationFrame( checkRafId );
+				startDissolve( 1200 );
+			}
+		} );
+
+		introVideo.addEventListener( 'ended', () => {
+			if ( checkRafId ) cancelAnimationFrame( checkRafId );
+			startDissolve( 600 );
+		}, { once: true } );
+
+		introVideo.addEventListener( 'error', () => {
+			if ( checkRafId ) cancelAnimationFrame( checkRafId );
+			startDissolve( 400 );
+		}, { once: true } );
+	} );
+}
+</script>
+
+</body>
+</html>
